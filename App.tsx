@@ -306,16 +306,17 @@ function App() {
                     <div className="flex flex-col items-center gap-6 w-full max-w-4xl">
                         <div className="flex flex-col md:flex-row items-center gap-8 w-full justify-center">
                             {/* Preview Card */}
-                            <div className="flex-shrink-0">
+                            <div className="flex-shrink-0 w-full max-w-[18rem] sm:max-w-[20rem]">
                                 <PolaroidCard 
                                     imageUrl={uploadedImage} 
                                     caption="Fotoğrafınız" 
                                     status="done"
+                                    isMobile={isMobile}
                                 />
                             </div>
                             
                             {/* Settings Panel */}
-                            <div className="flex flex-col gap-4 bg-neutral-900/50 backdrop-blur-sm p-6 rounded-xl border border-neutral-800 w-full max-w-md">
+                            <div className="flex flex-col gap-4 bg-neutral-900/50 backdrop-blur-sm p-4 sm:p-6 rounded-xl border border-neutral-800 w-full max-w-md">
                                 <div className="flex justify-between items-center mb-2">
                                     <h3 className="font-permanent-marker text-xl text-yellow-400">Oluşturulacak Yılları Seçin</h3>
                                     <div className="flex gap-2 text-xs">
@@ -343,13 +344,13 @@ function App() {
                             </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-6 mt-4">
-                            <button onClick={handleReset} className={secondaryButtonClasses}>
+                        <div className="flex flex-col sm:flex-row items-center gap-6 mt-4 w-full sm:w-auto px-4 sm:px-0">
+                            <button onClick={handleReset} className={`${secondaryButtonClasses} w-full sm:w-auto`}>
                                 Farklı Fotoğraf
                             </button>
                             <button 
                                 onClick={handleGenerateClick} 
-                                className={`${primaryButtonClasses} ${selectedDecades.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                                className={`${primaryButtonClasses} ${selectedDecades.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''} w-full sm:w-auto`}
                                 disabled={selectedDecades.length === 0}
                             >
                                 {selectedDecades.length === 0 ? 'Yıl Seçiniz' : 'Zaman Yolculuğunu Başlat'}
@@ -435,9 +436,9 @@ function App() {
                                 })}
                             </div>
                         )}
-                         <div className="h-24 mt-4 flex items-center justify-center z-20 fixed bottom-20 md:static">
+                         <div className="h-24 mt-4 flex items-center justify-center z-20 fixed bottom-20 md:static w-full px-4 sm:px-0">
                             {appState === 'results-shown' && (
-                                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 bg-black/80 sm:bg-black/40 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-white/10 shadow-2xl">
+                                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 bg-black/80 sm:bg-black/40 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-white/10 shadow-2xl w-full sm:w-auto max-w-md sm:max-w-none">
                                     <button 
                                         onClick={handleDownloadAlbum} 
                                         disabled={isDownloading} 
