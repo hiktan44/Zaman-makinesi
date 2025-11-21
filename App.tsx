@@ -361,23 +361,25 @@ function App() {
                 {(appState === 'generating' || appState === 'results-shown') && (
                      <>
                         {isMobile ? (
-                            <div className="w-full max-w-sm flex-1 overflow-y-auto mt-4 space-y-8 p-4">
-                                {DECADES.map((decade) => {
-                                    if (!generatedImages[decade]) return null;
-                                    return (
-                                        <div key={decade} className="flex justify-center">
-                                            <PolaroidCard
-                                                caption={decade}
-                                                status={generatedImages[decade]?.status || 'pending'}
-                                                imageUrl={generatedImages[decade]?.url}
-                                                error={generatedImages[decade]?.error}
-                                                onShake={handleRegenerateDecade}
-                                                onDownload={handleDownloadIndividualImage}
-                                                isMobile={isMobile}
-                                            />
-                                        </div>
-                                    );
-                                })}
+                            <div className="w-full max-w-5xl flex-1 overflow-y-auto mt-4 p-4">
+                                <div className="grid grid-cols-2 gap-3 pb-20">
+                                    {DECADES.map((decade) => {
+                                        if (!generatedImages[decade]) return null;
+                                        return (
+                                            <div key={decade} className="flex justify-center w-full">
+                                                <PolaroidCard
+                                                    caption={decade}
+                                                    status={generatedImages[decade]?.status || 'pending'}
+                                                    imageUrl={generatedImages[decade]?.url}
+                                                    error={generatedImages[decade]?.error}
+                                                    onShake={handleRegenerateDecade}
+                                                    onDownload={handleDownloadIndividualImage}
+                                                    isMobile={isMobile}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         ) : (
                             <div ref={dragAreaRef} className="relative w-full max-w-7xl h-[900px] mt-4">
@@ -433,17 +435,17 @@ function App() {
                                 })}
                             </div>
                         )}
-                         <div className="h-24 mt-4 flex items-center justify-center z-20">
+                         <div className="h-24 mt-4 flex items-center justify-center z-20 fixed bottom-20 md:static">
                             {appState === 'results-shown' && (
-                                <div className="flex flex-col sm:flex-row items-center gap-6 bg-black/40 backdrop-blur-md p-4 rounded-xl border border-white/10">
+                                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 bg-black/80 sm:bg-black/40 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-white/10 shadow-2xl">
                                     <button 
                                         onClick={handleDownloadAlbum} 
                                         disabled={isDownloading} 
-                                        className={`${primaryButtonClasses} disabled:opacity-50 disabled:cursor-not-allowed py-3 px-6 text-lg`}
+                                        className={`${primaryButtonClasses} disabled:opacity-50 disabled:cursor-not-allowed py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
                                     >
                                         {isDownloading ? 'Albüm Hazırlanıyor...' : 'Albümü İndir'}
                                     </button>
-                                    <button onClick={handleReset} className={`${secondaryButtonClasses} py-3 px-6 text-lg`}>
+                                    <button onClick={handleReset} className={`${secondaryButtonClasses} py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}>
                                         Başa Dön
                                     </button>
                                 </div>
