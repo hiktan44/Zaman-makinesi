@@ -30,19 +30,24 @@ const LoadingSpinner = () => (
     </div>
 );
 
-const ErrorDisplay = ({ onRetry }: { onRetry?: () => void }) => (
+const ErrorDisplay = ({ onRetry, message }: { onRetry?: () => void, message?: string }) => (
     <div 
-        className="flex flex-col items-center justify-center h-full text-red-400 gap-1 sm:gap-2 cursor-pointer group/error" 
+        className="flex flex-col items-center justify-center h-full text-red-400 gap-1 sm:gap-2 cursor-pointer group/error px-4 w-full" 
         onClick={(e) => { 
             e.stopPropagation(); 
             onRetry?.(); 
         }}
-        title="Tekrar denemek için tıkla"
+        title={message || "Tekrar denemek için tıkla"}
     >
-         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-10 sm:w-10 group-hover/error:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-10 sm:w-10 group-hover/error:scale-110 transition-transform mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span className="font-permanent-marker text-xs sm:text-sm text-center opacity-75 group-hover/error:opacity-100">Tekrar Dene</span>
+        {message && (
+            <p className="text-[10px] text-center text-red-500/80 mt-2 font-sans leading-tight break-words w-full px-2">
+                {message}
+            </p>
+        )}
     </div>
 );
 
@@ -124,7 +129,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
         <>
             <div className="w-full bg-neutral-900 shadow-inner flex-grow relative overflow-hidden group">
                 {status === 'pending' && <LoadingSpinner />}
-                {status === 'error' && <ErrorDisplay onRetry={handleRetry} />}
+                {status === 'error' && <ErrorDisplay onRetry={handleRetry} message={error} />}
                 {status === 'done' && imageUrl && (
                     <>
                         <div className={cn(

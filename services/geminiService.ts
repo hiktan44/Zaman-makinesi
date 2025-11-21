@@ -9,10 +9,18 @@ import type { GenerateContentResponse } from "@google/genai";
 const API_KEY = process.env.API_KEY;
 
 if (!API_KEY) {
-  throw new Error("API_KEY environment variable is not set");
+    // Safe access to process.env in browser environment usually handled by build tool, 
+    // but explicit check avoids runtime crashes if config is missing.
+    try {
+        if (typeof process !== 'undefined' && process.env && !process.env.API_KEY) {
+             console.error("API_KEY environment variable is missing.");
+        }
+    } catch (e) {
+        // Ignore errors accessing process in strict environments
+    }
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+const ai = new GoogleGenAI({ apiKey: API_KEY || '' });
 
 
 // --- Helper Functions ---
@@ -45,6 +53,29 @@ function getPrompt(decade: string): string {
  */
 function getFallbackPrompt(decade: string): string {
     return `Generate a photo of the person in this image as if they were living in the ${decade}. The photo should reflect the distinct fashion, hairstyles, and atmosphere of that era. Ensure the final image is a clear, authentic-looking photograph suitable for the time period.`;
+}
+
+/**
+ * Maps technical error messages to user-friendly Turkish messages.
+ */
+function getFriendlyErrorMessage(error: unknown): string {
+    const msg = error instanceof Error ? error.message : String(error);
+    
+    if (msg.includes('"code":429') || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("429")) {
+        return "Günlük kullanım limitine ulaşıldı. Lütfen daha sonra tekrar deneyin.";
+    }
+    if (msg.includes('"code":500') || msg.includes("INTERNAL")) {
+        return "Sunucu hatası oluştu. Lütfen tekrar deneyin.";
+    }
+    if (msg.includes("SAFETY") || msg.includes("BLOCKED") || msg.includes("finishReason")) {
+        return "Güvenlik filtresi nedeniyle resim oluşturulamadı.";
+    }
+    if (msg.includes("Yapay zeka model bir resim yerine metin ile yanıt verdi")) {
+         return "Model görüntü üretemedi.";
+    }
+    
+    // If the message is short enough, return it, otherwise generic error
+    return msg.length < 150 ? msg : "Beklenmedik bir hata oluştu.";
 }
 
 /**
@@ -106,7 +137,7 @@ async function callGeminiWithRetry(imagePart: object, textPart: object): Promise
         }
     }
     // This should be unreachable due to the loop and throw logic above.
-    throw new Error("Gemini API call failed after all retries.");
+    throw new Error("Gemini API çağrısı tüm denemelerden sonra başarısız oldu.");
 }
 
 
@@ -119,7 +150,7 @@ async function callGeminiWithRetry(imagePart: object, textPart: object): Promise
 export async function generateDecadeImage(imageDataUrl: string, decade: string): Promise<string> {
   const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.*)$/);
   if (!match) {
-    throw new Error("Invalid image data URL format. Expected 'data:image/...;base64,...'");
+    throw new Error("Geçersiz resim formatı.");
   }
   const [, mimeType, base64Data] = match;
 
@@ -154,13 +185,12 @@ export async function generateDecadeImage(imageDataUrl: string, decade: string):
                 return processGeminiResponse(fallbackResponse);
             } catch (fallbackError) {
                 console.error("Fallback prompt also failed.", fallbackError);
-                const finalErrorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-                throw new Error(`Yapay zeka modeli resim oluşturamadı. Lütfen tekrar deneyin. (Detay: ${finalErrorMessage})`);
+                throw new Error(getFriendlyErrorMessage(fallbackError));
             }
         } else {
             // This is for other errors, like a final internal server error after retries.
             console.error("An unrecoverable error occurred during image generation.", error);
-            throw new Error(`Resim oluşturulurken bir hata oluştu: ${errorMessage}`);
+            throw new Error(getFriendlyErrorMessage(error));
         }
     }
 }
