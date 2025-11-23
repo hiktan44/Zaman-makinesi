@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zaman Makinesi | Uygulama</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="app.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Caveat:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="background-overlay"></div>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <i class="fa-solid fa-clock-rotate-left"></i> Zaman Makinesi
+            </a>
+            <a href="index.html" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Ana Sayfaya Dön</a>
+        </div>
+    </nav>
+
+    <main class="app-container">
+        <!-- Step 1: Upload -->
+        <section id="upload-step" class="app-step active">
+            <div class="step-header">
+                <h2>Fotoğrafını Yükle</h2>
+                <p>Zaman yolculuğuna başlamak için net bir portre fotoğrafı seç.</p>
+            </div>
+            <div class="upload-area" id="drop-zone">
+                <div class="upload-content">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <h3>Fotoğrafı Sürükle & Bırak</h3>
+                    <p>veya dosya seçmek için tıkla</p>
+                    <input type="file" id="file-input" accept="image/*" hidden>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Select Era -->
+        <section id="era-step" class="app-step hidden">
+            <div class="step-header">
+                <h2>Dönem Seç</h2>
+                <p>Hangi zamana gitmek istersin? Birden fazla seçebilirsin.</p>
+            </div>
+            <div class="era-grid">
+                <button class="era-btn" data-year="1860">
+                    <span class="year">1860'lar</span>
+                    <span class="desc">Sepya & Vintage</span>
+                </button>
+                <button class="era-btn" data-year="1920">
+                    <span class="year">1920'ler</span>
+                    <span class="desc">Gangster & Caz</span>
+                </button>
+                <button class="era-btn" data-year="1950">
+                    <span class="year">1950'ler</span>
+                    <span class="desc">Rock'n Roll</span>
+                </button>
+                <button class="era-btn" data-year="1980">
+                    <span class="year">1980'ler</span>
+                    <span class="desc">Neon & Retro</span>
+                </button>
+                <button class="era-btn" data-year="2000">
+                    <span class="year">2000'ler</span>
+                    <span class="desc">Milenyum</span>
+                </button>
+                <button class="era-btn future" data-year="2040">
+                    <span class="year">2040</span>
+                    <span class="desc">Siberpunk</span>
+                </button>
+            </div>
+            <div class="action-area">
+                <button id="generate-btn" class="btn btn-primary" disabled>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Yolculuğa Başla
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3: Processing -->
+        <section id="processing-step" class="app-step hidden">
+            <div class="loader-content">
+                <div class="time-portal">
+                    <div class="portal-ring"></div>
+                    <div class="portal-core"></div>
+                </div>
+                <h3>Fotoğraflar Banyo Ediliyor...</h3>
+                <p id="loading-text">Yapay zeka 1860 yılına uyarlıyor...</p>
+            </div>
+        </section>
+
+        <!-- Step 4: Results -->
+        <section id="result-step" class="app-step hidden">
+            <div class="step-header">
+                <h2>Yolculuk Tamamlandı!</h2>
+                <div class="result-actions">
+                    <button class="btn btn-secondary" onclick="location.reload()"><i
+                            class="fa-solid fa-rotate-right"></i> Yeni Yolculuk</button>
+                    <button class="btn btn-primary"><i class="fa-solid fa-download"></i> Albümü İndir</button>
+                </div>
+            </div>
+            <div class="polaroid-gallery" id="results-gallery">
+                <!-- Results will be injected here -->
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

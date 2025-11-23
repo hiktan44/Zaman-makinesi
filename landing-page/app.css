@@ -1,0 +1,223 @@
+/* App Specific Styles */
+.app-container {
+    padding-top: 100px;
+    min-height: 100vh;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-bottom: 4rem;
+}
+
+.app-step {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.hidden {
+    display: none;
+}
+
+.step-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.step-header h2 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Upload Area */
+.upload-area {
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px dashed rgba(139, 92, 246, 0.3);
+    border-radius: 24px;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover,
+.upload-area.dragover {
+    background: rgba(139, 92, 246, 0.05);
+    border-color: var(--primary);
+}
+
+.upload-content {
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.upload-content i {
+    font-size: 4rem;
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+}
+
+/* Era Grid */
+.era-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.era-btn {
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.era-btn:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.era-btn.selected {
+    border-color: var(--primary);
+    background: rgba(139, 92, 246, 0.1);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+}
+
+.era-btn .year {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.era-btn .desc {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.era-btn.future .year {
+    color: var(--secondary);
+}
+
+.action-area {
+    text-align: center;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Loading Animation */
+.loader-content {
+    text-align: center;
+    padding: 4rem 0;
+}
+
+.time-portal {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 2rem;
+    position: relative;
+}
+
+.portal-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 4px solid transparent;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.portal-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60%;
+    height: 60%;
+    background: var(--gradient-main);
+    border-radius: 50%;
+    filter: blur(10px);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Polaroid Gallery */
+.polaroid-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 3rem;
+    padding: 2rem;
+}
+
+.polaroid-card {
+    background: var(--polaroid-white);
+    padding: 1rem 1rem 3rem 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transform: rotate(var(--rotation));
+    transition: all 0.4s ease;
+    animation: develop 2s ease-out forwards;
+    opacity: 0;
+}
+
+.polaroid-card:hover {
+    transform: scale(1.05) rotate(0deg);
+    z-index: 10;
+}
+
+.polaroid-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: #222;
+    margin-bottom: 1rem;
+    filter: sepia(var(--sepia-amount));
+}
+
+.polaroid-caption {
+    font-family: 'Caveat', cursive;
+    color: #333;
+    font-size: 1.5rem;
+    text-align: center;
+    transform: rotate(-2deg);
+}
+
+@keyframes develop {
+    0% {
+        opacity: 0;
+        filter: brightness(0) blur(10px);
+    }
+
+    50% {
+        opacity: 1;
+        filter: brightness(0.5) blur(5px);
+    }
+
+    100% {
+        opacity: 1;
+        filter: brightness(1) blur(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.5;
+    }
+}
