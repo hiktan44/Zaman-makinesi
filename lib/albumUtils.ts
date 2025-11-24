@@ -27,7 +27,7 @@ export async function createAlbumPage(imageData: Record<string, string>, addCred
     const canvasHeight = 3508;
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) {
         throw new Error('Could not get 2D canvas context');
@@ -60,8 +60,10 @@ export async function createAlbumPage(imageData: Record<string, string>, addCred
     }));
 
     // 4. Define grid layout and draw each polaroid
-    // Updated for 12 images: 3 columns x 4 rows
-    const grid = { cols: 3, rows: 4, padding: 60 };
+    // Updated for dynamic number of images
+    const cols = 3;
+    const rows = Math.ceil(decades.length / cols);
+    const grid = { cols, rows, padding: 60 };
     const contentTopMargin = 300; // Space for the header
     const contentHeight = canvasHeight - contentTopMargin;
     const cellWidth = (canvasWidth - grid.padding * (grid.cols + 1)) / grid.cols;
@@ -95,29 +97,29 @@ export async function createAlbumPage(imageData: Record<string, string>, addCred
         // Calculate top-left corner of the polaroid within its grid cell
         const x = grid.padding * (col + 1) + cellWidth * col + (cellWidth - polaroidWidth) / 2;
         const y = contentTopMargin + grid.padding * (row + 1) + cellHeight * row + (cellHeight - polaroidHeight) / 2;
-        
+
         ctx.save();
-        
+
         // Translate context to the center of the polaroid for rotation
         ctx.translate(x + polaroidWidth / 2, y + polaroidHeight / 2);
-        
+
         // Apply a slight, random rotation for a hand-placed look
         const rotation = (Math.random() - 0.5) * 0.1; // Radians (approx. +/- 2.8 degrees)
         ctx.rotate(rotation);
-        
+
         // Draw a soft shadow
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
         ctx.shadowBlur = 35;
         ctx.shadowOffsetX = 5;
         ctx.shadowOffsetY = 10;
-        
+
         // Draw the white polaroid frame (centered at the new origin)
         ctx.fillStyle = '#fff';
         ctx.fillRect(-polaroidWidth / 2, -polaroidHeight / 2, polaroidWidth, polaroidHeight);
-        
+
         // Remove shadow for subsequent drawing
         ctx.shadowColor = 'transparent';
-        
+
         // Calculate image dimensions to fit while maintaining aspect ratio
         const aspectRatio = img.naturalWidth / img.naturalHeight;
         let drawWidth = imageContainerWidth;
@@ -131,12 +133,12 @@ export async function createAlbumPage(imageData: Record<string, string>, addCred
         // Calculate position to center the image within its container area
         const imageAreaTopMargin = (polaroidWidth - imageContainerWidth) / 2;
         const imageContainerY = -polaroidHeight / 2 + imageAreaTopMargin;
-        
+
         const imgX = -drawWidth / 2; // Horizontally centered due to context translation
         const imgY = imageContainerY + (imageContainerHeight - drawHeight) / 2;
-        
+
         ctx.drawImage(img, imgX, imgY, drawWidth, drawHeight);
-        
+
         // Draw the handwritten caption
         ctx.fillStyle = '#222';
         ctx.font = `60px 'Permanent Marker', cursive`;
@@ -148,7 +150,7 @@ export async function createAlbumPage(imageData: Record<string, string>, addCred
         const captionY = captionAreaTop + (captionAreaBottom - captionAreaTop) / 2;
 
         ctx.fillText(decade, 0, captionY);
-        
+
         ctx.restore(); // Restore context to pre-transformation state
     });
 

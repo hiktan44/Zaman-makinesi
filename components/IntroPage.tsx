@@ -1,0 +1,188 @@
+import React from 'react';
+import { useTheme } from '../contexts/ThemeContext';
+
+interface IntroPageProps {
+    onStart: () => void;
+}
+
+const IntroPage: React.FC<IntroPageProps> = ({ onStart }) => {
+    const { theme, toggleTheme } = useTheme();
+
+    return (
+        <div className="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark font-display">
+            <div className="layout-container flex h-full grow flex-col">
+                <div className="px-4 md:px-10 lg:px-20 xl:px-40 flex flex-1 justify-center py-5">
+                    <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+
+                        {/* Header */}
+                        <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-stone-200 dark:border-border-dark px-4 md:px-10 py-3">
+                            <div className="flex items-center gap-4 text-text-light dark:text-text-dark">
+                                <div className="size-6 text-primary">
+                                    <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z"></path>
+                                    </svg>
+                                </div>
+                                <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">Zaman Makinesi Fotoğrafları</h2>
+                            </div>
+                            <nav className="flex flex-1 justify-end gap-4 md:gap-8">
+                                <div className="hidden md:flex items-center gap-9">
+                                    <a className="text-text-light dark:text-text-dark text-sm font-medium leading-normal hover:text-primary transition-colors" href="#features">Özellikler</a>
+                                    <a className="text-text-light dark:text-text-dark text-sm font-medium leading-normal hover:text-primary transition-colors" href="#about">Hakkında</a>
+                                </div>
+                                <button
+                                    onClick={toggleTheme}
+                                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark hover:bg-stone-200 dark:hover:bg-border-dark transition-colors"
+                                    aria-label="Toggle theme"
+                                >
+                                    {theme === 'dark' ? (
+                                        <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                        </svg>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={onStart}
+                                    className="hidden md:flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent border border-primary text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary hover:text-background-dark transition-colors"
+                                >
+                                    <span className="truncate">Şimdi Başla</span>
+                                </button>
+                            </nav>
+                        </header>
+
+                        <main>
+                            {/* Hero Section */}
+                            <section className="py-10 md:py-20">
+                                <div className="@container">
+                                    <div className="flex flex-col gap-6 px-4 py-10 @[480px]:gap-8 @[864px]:flex-row-reverse">
+                                        <div
+                                            className="w-full bg-center bg-no-repeat aspect-square md:aspect-video bg-cover rounded-xl @[480px]:h-auto @[480px]:min-w-[400px] @[864px]:w-full"
+                                            style={{ backgroundImage: 'url("/images/hero-example.jpg")' }}
+                                        ></div>
+                                        <div className="flex flex-col gap-6 @[480px]:min-w-[400px] @[480px]:gap-8 @[864px]:justify-center">
+                                            <div className="flex flex-col gap-2 text-left">
+                                                <h1 className="text-text-light dark:text-text-dark text-4xl font-black leading-tight tracking-[-0.033em] @[480px]:text-5xl">Anılarınızı Zamanda Yolculuğa Çıkarın</h1>
+                                                <h2 className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal @[480px]:text-base">Geçmişe ait bir fotoğrafınızı yükleyin, on yılı seçin ve sihrin gerçekleşmesini izleyin.</h2>
+                                            </div>
+                                            <button
+                                                onClick={onStart}
+                                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 @[480px]:h-12 @[480px]:px-5 bg-primary text-background-dark text-sm font-bold leading-normal tracking-[0.015em] @[480px]:text-base hover:bg-yellow-500 transition-colors"
+                                            >
+                                                <span className="truncate">Uygulamayı Dene</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* How It Works Section */}
+                            <section className="py-10 md:py-20" id="how-it-works">
+                                <div className="flex flex-col gap-10 px-4 py-10 @container">
+                                    <div className="flex flex-col gap-4 text-center items-center">
+                                        <h1 className="text-text-light dark:text-text-dark tracking-light text-[32px] font-bold leading-tight @[480px]:text-4xl max-w-[720px]">Üç Basit Adımda Zamanda Yolculuk</h1>
+                                        <p className="text-text-muted-light dark:text-text-muted-dark text-base font-normal leading-normal max-w-[720px]">Geçmişe gitmek hiç bu kadar kolay olmamıştı. Sadece üç basit adımı izleyin ve fotoğraflarınızın on yıllar boyunca dönüşümünü izleyin.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-0">
+                                        <div className="flex flex-1 gap-3 rounded-lg border border-stone-200 dark:border-border-dark bg-stone-50 dark:bg-surface-dark p-4 flex-col text-center items-center">
+                                            <span className="material-symbols-outlined text-primary" style={{ fontSize: '36px' }}>upload_file</span>
+                                            <div className="flex flex-col gap-1">
+                                                <h2 className="text-text-light dark:text-text-dark text-base font-bold leading-tight">1. Yükle</h2>
+                                                <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">Yeniden hayal etmek istediğiniz bir fotoğrafı cihazınızdan seçin.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-1 gap-3 rounded-lg border border-stone-200 dark:border-border-dark bg-stone-50 dark:bg-surface-dark p-4 flex-col text-center items-center">
+                                            <span className="material-symbols-outlined text-primary" style={{ fontSize: '36px' }}>calendar_month</span>
+                                            <div className="flex flex-col gap-1">
+                                                <h2 className="text-text-light dark:text-text-dark text-base font-bold leading-tight">2. On Yıl Seç</h2>
+                                                <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">1920'lerden 2000'lere kadar geniş bir yelpazeden bir on yıl seçin.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-1 gap-3 rounded-lg border border-stone-200 dark:border-border-dark bg-stone-50 dark:bg-surface-dark p-4 flex-col text-center items-center">
+                                            <span className="material-symbols-outlined text-primary" style={{ fontSize: '36px' }}>auto_awesome</span>
+                                            <div className="flex flex-col gap-1">
+                                                <h2 className="text-text-light dark:text-text-dark text-base font-bold leading-tight">3. Keşfet</h2>
+                                                <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">Yapay zekanın fotoğrafınızı o dönemin tarzına dönüştürmesini izleyin.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Features Section */}
+                            <section className="py-10 md:py-20" id="features">
+                                <div className="flex flex-col gap-10 px-4 py-10 @container">
+                                    <div className="flex flex-col gap-4 text-center items-center">
+                                        <h1 className="text-text-light dark:text-text-dark tracking-light text-[32px] font-bold leading-tight @[480px]:text-4xl max-w-[720px]">Temel Özellikler</h1>
+                                        <p className="text-text-muted-light dark:text-text-muted-dark text-base font-normal leading-normal max-w-[720px]">Zaman Makinesi Fotoğrafları, anılarınızı yeniden keşfetmeniz için güçlü ve kullanımı kolay araçlar sunar.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                        <div className="flex flex-col gap-3 pb-3">
+                                            <div className="w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark">
+                                                <img src="/images/feature-1.jpg" alt="Zaman Yolculuğu Örneği" className="w-full h-auto object-contain" />
+                                            </div>
+                                            <div>
+                                                <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal">Zaman Yolculuğu</p>
+                                                <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">Fotoğraflarınızın 1920'lerden 2000'lere kadar farklı dönemlerde nasıl görüneceğini keşfedin.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-3 pb-3">
+                                            <div className="w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark">
+                                                <img src="/images/feature-2.jpg" alt="İnteraktif Arayüz Örneği" className="w-full h-auto object-contain" />
+                                            </div>
+                                            <div>
+                                                <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal">İnteraktif Arayüz</p>
+                                                <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">Sadece birkaç tıklama ile yaratıcılığınızı ortaya çıkarın. Kullanıcı dostu arayüzümüzle kolayca gezinin.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-3 pb-3">
+                                            <div className="w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark">
+                                                <img src="/images/feature-3.jpg" alt="İndirme ve Paylaşım Örneği" className="w-full h-auto object-contain" />
+                                            </div>
+                                            <div>
+                                                <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal">İndirme ve Paylaşım</p>
+                                                <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">Oluşturduğunuz görselleri yüksek kalitede indirin ve arkadaşlarınızla sosyal medyada paylaşın.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* CTA Section */}
+                            <section className="py-10 md:py-20">
+                                <div className="flex flex-col gap-6 text-center items-center px-4 py-10 bg-stone-50 dark:bg-surface-dark rounded-xl">
+                                    <h2 className="text-text-light dark:text-text-dark text-3xl font-bold leading-tight tracking-[-0.015em] max-w-xl">Kendi Zaman Kapsülünüzü Yaratmaya Hazır mısınız?</h2>
+                                    <p className="text-text-muted-light dark:text-text-muted-dark text-base font-normal leading-normal max-w-2xl">Geçmişe yolculuğa şimdi başlayın ve anılarınızı daha önce hiç görülmemiş bir şekilde yeniden yaşayın. Tek bir tıklama ile fotoğraflarınızı on yıllar öncesine taşıyın.</p>
+                                    <button
+                                        onClick={onStart}
+                                        className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-primary text-background-dark text-base font-bold leading-normal tracking-[0.015em] hover:bg-yellow-500 transition-colors"
+                                    >
+                                        <span className="truncate">Geçmişe Yolculuğa Şimdi Başla!</span>
+                                    </button>
+                                </div>
+                            </section>
+                        </main>
+
+                        {/* Footer */}
+                        <footer className="py-10 mt-10 border-t border-solid border-stone-200 dark:border-border-dark" id="about">
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-text-muted-light dark:text-text-muted-dark text-sm">© 2024 Zaman Makinesi Fotoğrafları. Tüm Hakları Saklıdır.</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-text-muted-light dark:text-text-muted-dark">
+                                    <a className="text-sm hover:text-primary transition-colors" href="#">Gizlilik Politikası</a>
+                                    <a className="text-sm hover:text-primary transition-colors" href="#">Kullanım Koşulları</a>
+                                </div>
+                            </div>
+                        </footer>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default IntroPage;
