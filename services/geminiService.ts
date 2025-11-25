@@ -6,7 +6,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { GenerateContentResult } from "@google/generative-ai";
 
-const API_KEY = import.meta.env.VITE_API_KEY;
+const API_KEY = import.meta.env.VITE_API_KEY?.trim();
 
 if (!API_KEY) {
     console.error("VITE_API_KEY environment variable is missing. Please add it to your .env file.");
