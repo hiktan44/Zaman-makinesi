@@ -12,7 +12,7 @@ const Footer: React.FC = () => {
             </div>
             <div className="flex items-center gap-4">
                 <a
-                    href="https://wa.me/905324614444"
+                    href="https://wa.me/905306042829"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center w-10 h-10 rounded-full bg-[#25D366] text-white hover:bg-[#128C7E] transition-all duration-300 hover:scale-110 animate-bounce shadow-lg"
