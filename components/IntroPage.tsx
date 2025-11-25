@@ -118,7 +118,7 @@ const IntroPage: React.FC<IntroPageProps> = ({ onStart }) => {
                                         <h1 className="text-text-light dark:text-text-dark tracking-light text-[32px] font-bold leading-tight @[480px]:text-4xl max-w-[720px]">Temel Özellikler</h1>
                                         <p className="text-text-muted-light dark:text-text-muted-dark text-base font-normal leading-normal max-w-[720px]">Zaman Makinesi Fotoğrafları, anılarınızı yeniden keşfetmeniz için güçlü ve kullanımı kolay araçlar sunar.</p>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                         <div className="flex flex-col gap-3 pb-3">
                                             <div className="w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark">
                                                 <img src="/images/feature-1.jpg" alt="Zaman Yolculuğu Örneği" className="w-full h-auto object-contain" />
@@ -144,6 +144,15 @@ const IntroPage: React.FC<IntroPageProps> = ({ onStart }) => {
                                             <div>
                                                 <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal">İndirme ve Paylaşım</p>
                                                 <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">Oluşturduğunuz görselleri yüksek kalitede indirin ve arkadaşlarınızla sosyal medyada paylaşın.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-3 pb-3">
+                                            <div className="w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark">
+                                                <img src="/images/feature-4.jpg" alt="Gerçekçi Dönüşüm Örneği" className="w-full h-auto object-contain" />
+                                            </div>
+                                            <div>
+                                                <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal">Gerçekçi Dönüşüm</p>
+                                                <p className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">Yapay zeka teknolojimiz ile fotoğraflarınızın dokusunu ve atmosferini o döneme uygun hale getirin.</p>
                                             </div>
                                         </div>
                                     </div>
