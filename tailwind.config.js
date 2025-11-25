@@ -7,7 +7,7 @@ export default {
         "./contexts/**/*.{js,ts,jsx,tsx}",
         "./lib/**/*.{js,ts,jsx,tsx}",
     ],
-    darkMode: "class",
+    darkMode: "selector",
     theme: {
         extend: {
             colors: {

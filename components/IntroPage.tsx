@@ -130,7 +130,7 @@ const IntroPage: React.FC<IntroPageProps> = ({ onStart }) => {
                                         </div>
                                         <div className="flex flex-col gap-3 pb-3">
                                             <div className="w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark">
-                                                <img src="/images/feature-2.jpg" alt="İnteraktif Arayüz Örneği" className="w-full h-auto object-contain" />
+                                                <img src="/images/feature-2-v2.jpg" alt="İnteraktif Arayüz Örneği" className="w-full h-auto object-contain" />
                                             </div>
                                             <div>
                                                 <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal">İnteraktif Arayüz</p>
@@ -139,7 +139,7 @@ const IntroPage: React.FC<IntroPageProps> = ({ onStart }) => {
                                         </div>
                                         <div className="flex flex-col gap-3 pb-3">
                                             <div className="w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark">
-                                                <img src="/images/feature-3.jpg" alt="İndirme ve Paylaşım Örneği" className="w-full h-auto object-contain" />
+                                                <img src="/images/feature-3-v2.jpg" alt="İndirme ve Paylaşım Örneği" className="w-full h-auto object-contain" />
                                             </div>
                                             <div>
                                                 <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal">İndirme ve Paylaşım</p>
