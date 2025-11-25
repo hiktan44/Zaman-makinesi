@@ -31,15 +31,15 @@ const LoadingSpinner = () => (
 );
 
 const ErrorDisplay = ({ onRetry }: { onRetry?: () => void }) => (
-    <div 
-        className="flex flex-col items-center justify-center h-full text-red-400 gap-1 sm:gap-2 cursor-pointer group/error" 
-        onClick={(e) => { 
-            e.stopPropagation(); 
-            onRetry?.(); 
+    <div
+        className="flex flex-col items-center justify-center h-full text-red-400 gap-1 sm:gap-2 cursor-pointer group/error"
+        onClick={(e) => {
+            e.stopPropagation();
+            onRetry?.();
         }}
         title="Tekrar denemek için tıkla"
     >
-         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-10 sm:w-10 group-hover/error:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-10 sm:w-10 group-hover/error:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span className="font-permanent-marker text-xs sm:text-sm text-center opacity-75 group-hover/error:opacity-100">Tekrar Dene</span>
@@ -63,6 +63,8 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
     const lastShakeTime = useRef(0);
     const lastVelocity = useRef({ x: 0, y: 0 });
 
+    const imgRef = useRef<HTMLImageElement>(null);
+
     // Reset states when the image URL changes or status goes to pending.
     useEffect(() => {
         if (status === 'pending') {
@@ -74,6 +76,13 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
             setIsImageLoaded(false);
         }
     }, [imageUrl, status]);
+
+    // Check if image is already loaded (e.g. from cache)
+    useEffect(() => {
+        if (imgRef.current && imgRef.current.complete) {
+            setIsImageLoaded(true);
+        }
+    }, [imageUrl]);
 
     // When the image is loaded, start the developing animation.
     useEffect(() => {
@@ -145,7 +154,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
                                     </svg>
                                 </button>
                             )}
-                             {isMobile && onShake && (
+                            {isMobile && onShake && (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -164,24 +173,22 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
 
                         {/* The developing chemical overlay - fades out */}
                         <div
-                            className={`absolute inset-0 z-10 bg-[#3a322c] transition-opacity duration-[3500ms] ease-out ${
-                                isDeveloped ? 'opacity-0' : 'opacity-100'
-                            }`}
+                            className={`absolute inset-0 z-10 bg-[#3a322c] transition-opacity duration-[3500ms] ease-out ${isDeveloped ? 'opacity-0' : 'opacity-100'
+                                }`}
                             aria-hidden="true"
                         />
-                        
+
                         {/* The Image - fades in and color corrects */}
                         <img
+                            ref={imgRef}
                             key={imageUrl}
                             src={imageUrl}
                             alt={caption}
                             onLoad={() => setIsImageLoaded(true)}
-                            className={`w-full h-full object-cover transition-all duration-[4000ms] ease-in-out ${
-                                isDeveloped 
-                                ? 'opacity-100 filter-none' 
+                            className={`w-full h-full object-cover transition-all duration-[4000ms] ease-in-out ${isDeveloped
+                                ? 'opacity-100 filter-none'
                                 : 'opacity-80 filter sepia(1) contrast(0.8) brightness(0.8)'
-                            }`}
-                            style={{ opacity: isImageLoaded ? undefined : 0 }}
+                                }`}
                         />
                     </>
                 )}
@@ -208,7 +215,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
 
     return (
         <DraggableCardContainer>
-            <DraggableCardBody 
+            <DraggableCardBody
                 className="bg-neutral-100 dark:bg-neutral-100 !p-4 !pb-16 flex flex-col items-center justify-start aspect-[3/4] w-80 max-w-full"
                 dragConstraintsRef={dragConstraintsRef}
                 onDragStart={handleDragStart}
