@@ -10,6 +10,9 @@ const API_KEY = import.meta.env.VITE_API_KEY;
 
 if (!API_KEY) {
     console.error("VITE_API_KEY environment variable is missing. Please add it to your .env file.");
+} else {
+    // Debug log to verify key is loaded (masked for security)
+    console.log(`API Key loaded: ${API_KEY.substring(0, 5)}...${API_KEY.substring(API_KEY.length - 3)} (Length: ${API_KEY.length})`);
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
