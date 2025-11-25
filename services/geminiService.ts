@@ -16,7 +16,7 @@ if (!API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" }); // Use a standard text/image model first to test authentication
+const model = genAI.getGenerativeModel({ model: "gemini-3.0-pro" }); // Use a standard text/image model first to test authentication
 
 
 // --- Helper Functions ---
@@ -118,8 +118,8 @@ async function callGeminiWithRetry(imagePart: { inlineData: { mimeType: string; 
     const maxRetries = 5;
     let retryDelay = 2000;
 
-    // Use the flash model which supports vision
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    // Use the pro model which supports vision
+    const model = genAI.getGenerativeModel({ model: "gemini-3.0-pro" });
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
