@@ -1,10 +1,9 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { GenerateContentResult } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
+import type { GenerateContentResponse } from "@google/genai";
 
 const API_KEY = import.meta.env.VITE_API_KEY?.trim();
 
@@ -15,8 +14,7 @@ if (!API_KEY) {
     console.log(`API Key loaded: ${API_KEY.substring(0, 5)}...${API_KEY.substring(API_KEY.length - 3)} (Length: ${API_KEY.length})`);
 }
 
-const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Use a standard text/image model first to test authentication
+const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 
 // --- Helper Functions ---
@@ -79,25 +77,15 @@ function getFriendlyErrorMessage(error: unknown): string {
  * @param response The response from the generateContent call.
  * @returns A data URL string for the generated image.
  */
-function processGeminiResponse(response: GenerateContentResult): string {
-    // Note: The structure of the response might differ slightly in the new SDK
-    // Usually response.response.candidates[0].content.parts...
-    const candidate = response.response.candidates?.[0];
-    // Check for inline data (image)
-    // The new SDK might return images differently or we might need to request it specifically.
-    // However, for text-to-image models, it often returns base64 in inlineData.
+function processGeminiResponse(response: GenerateContentResponse): string {
+    const imagePartFromResponse = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
 
-    // Let's inspect the parts
-    const parts = candidate?.content?.parts;
-    const imagePart = parts?.find(part => part.inlineData);
-
-    if (imagePart?.inlineData) {
-        const { mimeType, data } = imagePart.inlineData;
+    if (imagePartFromResponse?.inlineData) {
+        const { mimeType, data } = imagePartFromResponse.inlineData;
         return `data:${mimeType};base64,${data}`;
     }
 
-    // If no image, check for text (error message or refusal)
-    const textResponse = response.response.text();
+    const textResponse = response.text;
     console.error("API did not return an image. Response:", textResponse);
     throw new Error(`Yapay zeka model bir resim yerine metin ile yanıt verdi: "${textResponse || 'Yanıt alınamadı.'}"`);
 }
@@ -106,47 +94,43 @@ function processGeminiResponse(response: GenerateContentResult): string {
  * A wrapper for the Gemini API call that includes a retry mechanism for internal server errors and rate limits.
  * @param imagePart The image part of the request payload.
  * @param textPart The text part of the request payload.
- * @returns The GenerateContentResult from the API.
+ * @returns The GenerateContentResponse from the API.
  */
-/**
- * A wrapper for the Gemini API call that includes a retry mechanism for internal server errors and rate limits.
- * @param imagePart The image part of the request payload.
- * @param textPart The text part of the request payload.
- * @returns The GenerateContentResult from the API.
- */
-async function callGeminiWithRetry(imagePart: { inlineData: { mimeType: string; data: string } }, textPart: { text: string }): Promise<GenerateContentResult> {
-    const maxRetries = 5;
-    let retryDelay = 2000;
-
-    // Use the pro model which supports vision
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+async function callGeminiWithRetry(imagePart: object, textPart: object): Promise<GenerateContentResponse> {
+    const maxRetries = 5; // Increased max retries to handle rate limits
+    let retryDelay = 2000; // Start with 2 seconds delay for rate limits
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            // The new SDK expects an array of parts directly
-            return await model.generateContent([textPart, imagePart]);
+            return await ai.models.generateContent({
+                model: 'gemini-2.5-flash-image',
+                contents: { parts: [imagePart, textPart] },
+            });
         } catch (error) {
             console.error(`Error calling Gemini API (Attempt ${attempt}/${maxRetries}):`, error);
             const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
 
-            const isInternalError = errorMessage.includes('500') || errorMessage.includes('INTERNAL');
-            const isQuotaError = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED');
+            const isInternalError = errorMessage.includes('"code":500') || errorMessage.includes('INTERNAL');
+            const isQuotaError = errorMessage.includes('"code":429') || errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('429');
 
             if ((isInternalError || isQuotaError) && attempt < maxRetries) {
-                let waitTime = 1000 * Math.pow(2, attempt - 1);
+                // Determine wait time
+                let waitTime = 1000 * Math.pow(2, attempt - 1); // Standard backoff for internal errors
 
                 if (isQuotaError) {
+                    // Aggressive backoff for rate limits
                     waitTime = retryDelay;
-                    retryDelay *= 2;
+                    retryDelay *= 2; // Double the delay for the next potential retry
                 }
 
                 console.log(`${isQuotaError ? 'Quota/Rate limit' : 'Internal error'} detected. Retrying in ${waitTime}ms...`);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
             }
-            throw error;
+            throw error; // Re-throw if not a retriable error or if max retries are reached.
         }
     }
+    // This should be unreachable due to the loop and throw logic above.
     throw new Error("Gemini API call failed after all retries.");
 }
 
