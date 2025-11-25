@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, ChangeEvent, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { generateDecadeImage } from './services/geminiService';
 import PolaroidCard from './components/PolaroidCard';
 import { createAlbumPage } from './lib/albumUtils';
@@ -11,35 +10,6 @@ import Footer from './components/Footer';
 import Header from './components/Header';
 import LandingPage, { ALL_DECADES } from './components/LandingPage';
 import IntroPage from './components/IntroPage';
-
-// Pre-defined positions for a scattered look on desktop (12 positions)
-// We might need more positions if we have more decades now (19 decades)
-const POSITIONS = [
-    { top: '2%', left: '3%', rotate: -6 },
-    { top: '5%', left: '28%', rotate: 4 },
-    { top: '1%', left: '53%', rotate: -3 },
-    { top: '4%', left: '75%', rotate: 5 },
-
-    { top: '20%', left: '10%', rotate: 2 },
-    { top: '15%', left: '35%', rotate: -2 },
-    { top: '18%', left: '60%', rotate: 6 },
-    { top: '22%', left: '80%', rotate: -4 },
-
-    { top: '35%', left: '5%', rotate: 7 },
-    { top: '40%', left: '26%', rotate: -5 },
-    { top: '38%', left: '55%', rotate: 3 },
-    { top: '36%', left: '72%', rotate: -4 },
-
-    { top: '55%', left: '8%', rotate: -3 },
-    { top: '50%', left: '32%', rotate: 5 },
-    { top: '52%', left: '58%', rotate: -2 },
-    { top: '58%', left: '82%', rotate: 4 },
-
-    { top: '75%', left: '2%', rotate: -2 },
-    { top: '70%', left: '30%', rotate: 6 },
-    { top: '72%', left: '52%', rotate: -5 },
-    { top: '78%', left: '76%', rotate: 3 },
-];
 
 type ImageStatus = 'pending' | 'done' | 'error';
 interface GeneratedImage {
@@ -299,57 +269,25 @@ function App() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div ref={dragAreaRef} className="relative w-full max-w-7xl h-[900px] mt-4 bg-stone-100 dark:bg-surface-dark/30 rounded-xl border border-stone-200 dark:border-border-dark overflow-hidden">
-                                            {ALL_DECADES.map((decade, index) => {
-                                                // Only render if it's in the generatedImages map (i.e. was selected)
-                                                if (!generatedImages[decade]) return null;
-
-                                                const { top, left, rotate } = POSITIONS[index % POSITIONS.length] || { top: '0%', left: '0%', rotate: 0 };
-
-                                                // Generate a random float duration and delay for organic movement
-                                                const floatDuration = 3 + Math.random() * 2; // 3-5 seconds
-                                                const floatDelay = Math.random() * 2;
-
-                                                return (
-                                                    <motion.div
-                                                        key={decade}
-                                                        className="absolute cursor-grab active:cursor-grabbing"
-                                                        style={{ top, left }}
-                                                        initial={{ opacity: 0, scale: 0.5, y: 100, rotate: 0 }}
-                                                        animate={{
-                                                            opacity: 1,
-                                                            scale: 1,
-                                                            // Float animation logic:
-                                                            // If loading is done, bob up and down. Otherwise sit at 0.
-                                                            y: appState === 'results-shown' ? [0, -15, 0] : 0,
-                                                            rotate: `${rotate}deg`,
-                                                        }}
-                                                        transition={{
-                                                            // Entrance transition
-                                                            opacity: { duration: 0.5 },
-                                                            scale: { type: 'spring', stiffness: 100, delay: index * 0.1 },
-                                                            // Floating transition (loop)
-                                                            y: {
-                                                                duration: floatDuration,
-                                                                repeat: Infinity,
-                                                                ease: "easeInOut",
-                                                                delay: floatDelay
-                                                            }
-                                                        }}
-                                                    >
-                                                        <PolaroidCard
-                                                            dragConstraintsRef={dragAreaRef}
-                                                            caption={decade}
-                                                            status={generatedImages[decade]?.status || 'pending'}
-                                                            imageUrl={generatedImages[decade]?.url}
-                                                            error={generatedImages[decade]?.error}
-                                                            onShake={handleRegenerateDecade}
-                                                            onDownload={handleDownloadIndividualImage}
-                                                            isMobile={isMobile}
-                                                        />
-                                                    </motion.div>
-                                                );
-                                            })}
+                                        <div className="w-full max-w-7xl mt-4 p-4">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-20">
+                                                {ALL_DECADES.map((decade) => {
+                                                    if (!generatedImages[decade]) return null;
+                                                    return (
+                                                        <div key={decade} className="flex justify-center w-full">
+                                                            <PolaroidCard
+                                                                caption={decade}
+                                                                status={generatedImages[decade]?.status || 'pending'}
+                                                                imageUrl={generatedImages[decade]?.url}
+                                                                error={generatedImages[decade]?.error}
+                                                                onShake={handleRegenerateDecade}
+                                                                onDownload={handleDownloadIndividualImage}
+                                                                isMobile={isMobile}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                     <div className="h-24 mt-8 flex items-center justify-center z-20 w-full px-4 sm:px-0">
