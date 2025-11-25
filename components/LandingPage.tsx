@@ -6,6 +6,7 @@ interface LandingPageProps {
     selectedDecades: string[];
     onToggleDecade: (decade: string) => void;
     onSelectAll: () => void;
+    onClearAll: () => void;
     onGenerate: () => void;
 }
 
@@ -21,6 +22,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
     selectedDecades,
     onToggleDecade,
     onSelectAll,
+    onClearAll,
     onGenerate
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +87,10 @@ const LandingPage: React.FC<LandingPageProps> = ({
                         <div className="flex flex-col p-4 bg-white dark:bg-surface-dark border border-stone-200 dark:border-border-dark rounded-xl flex-grow">
                             <div className="flex justify-between items-center px-4 pt-5 pb-3">
                                 <h2 className="text-text-light dark:text-text-dark text-[22px] font-bold leading-tight tracking-[-0.015em]">Gideceğin Yılları Seç</h2>
-                                <button onClick={onSelectAll} className="text-sm font-medium text-primary hover:underline">Tümünü Seç</button>
+                                <div className="flex gap-3">
+                                    <button onClick={onSelectAll} className="text-sm font-medium text-primary hover:underline py-2">Tümünü Seç</button>
+                                    <button onClick={onClearAll} className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark hover:underline py-2">Temizle</button>
+                                </div>
                             </div>
                             <div className="px-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1">
                                 {ALL_DECADES.map((decade) => (

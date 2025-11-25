@@ -69,7 +69,7 @@ const useMediaQuery = (query: string) => {
 function App() {
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImage>>({});
-    const [selectedDecades, setSelectedDecades] = useState<string[]>(ALL_DECADES);
+    const [selectedDecades, setSelectedDecades] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isDownloading, setIsDownloading] = useState<boolean>(false);
     const [appState, setAppState] = useState<'idle' | 'image-uploaded' | 'generating' | 'results-shown'>('idle');
@@ -102,6 +102,7 @@ function App() {
     };
 
     const handleSelectAll = () => setSelectedDecades(ALL_DECADES);
+    const handleClearAll = () => setSelectedDecades([]);
 
     const handleGenerateClick = async () => {
         if (!uploadedImage || selectedDecades.length === 0) return;
@@ -269,6 +270,7 @@ function App() {
                                     selectedDecades={selectedDecades}
                                     onToggleDecade={toggleDecade}
                                     onSelectAll={handleSelectAll}
+                                    onClearAll={handleClearAll}
                                     onGenerate={handleGenerateClick}
                                 />
                             )}
@@ -277,7 +279,7 @@ function App() {
                                 <div className="flex-grow py-8 flex flex-col items-center">
                                     {isMobile ? (
                                         <div className="w-full max-w-5xl flex-1 overflow-y-auto mt-4 p-4">
-                                            <div className="grid grid-cols-2 gap-3 pb-20">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20">
                                                 {ALL_DECADES.map((decade) => {
                                                     if (!generatedImages[decade]) return null;
                                                     return (
