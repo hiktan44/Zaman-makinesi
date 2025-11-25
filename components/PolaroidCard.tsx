@@ -131,7 +131,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
 
     const cardInnerContent = (
         <>
-            <div className="w-full bg-neutral-900 shadow-inner flex-grow relative overflow-hidden group">
+            <div className="w-full h-full bg-neutral-900 shadow-inner flex-grow relative overflow-hidden group">
                 {status === 'pending' && <LoadingSpinner />}
                 {status === 'error' && <ErrorDisplay onRetry={handleRetry} />}
                 {status === 'done' && imageUrl && (
@@ -190,24 +190,23 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
                                 : 'opacity-80 filter sepia(1) contrast(0.8) brightness(0.8)'
                                 }`}
                         />
+
+                        {/* Timestamp Overlay */}
+                        <div className="absolute bottom-4 right-4 z-20 pointer-events-none">
+                            <p className="font-mono text-[#ff9900] text-xl sm:text-2xl font-bold tracking-widest drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] opacity-90" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
+                                {caption}
+                            </p>
+                        </div>
                     </>
                 )}
                 {status === 'done' && !imageUrl && <Placeholder />}
-            </div>
-            <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 text-center px-1">
-                <p className={cn(
-                    "font-permanent-marker text-sm sm:text-lg truncate",
-                    status === 'done' && imageUrl ? 'text-black' : 'text-neutral-800'
-                )}>
-                    {caption}
-                </p>
             </div>
         </>
     );
 
     if (isMobile) {
         return (
-            <div className="bg-neutral-100 dark:bg-neutral-100 !p-2 !pb-8 sm:!p-4 sm:!pb-16 flex flex-col items-center justify-start aspect-[3/4] w-full rounded-sm sm:rounded-md shadow-lg relative">
+            <div className="bg-neutral-900 dark:bg-neutral-900 !p-0 flex flex-col items-center justify-start aspect-[3/4] w-full rounded-xl shadow-lg relative overflow-hidden border border-neutral-800">
                 {cardInnerContent}
             </div>
         );
@@ -216,7 +215,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ imageUrl, caption, status, 
     return (
         <DraggableCardContainer>
             <DraggableCardBody
-                className="bg-neutral-100 dark:bg-neutral-100 !p-4 !pb-16 flex flex-col items-center justify-start aspect-[3/4] w-80 max-w-full"
+                className="bg-neutral-900 dark:bg-neutral-900 !p-0 flex flex-col items-center justify-start aspect-[3/4] w-80 max-w-full rounded-xl overflow-hidden border border-neutral-800"
                 dragConstraintsRef={dragConstraintsRef}
                 onDragStart={handleDragStart}
                 onDrag={handleDrag}
