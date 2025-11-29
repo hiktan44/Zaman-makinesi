@@ -7,10 +7,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultStep = document.getElementById('result-step');
     const eraBtns = document.querySelectorAll('.era-btn');
     const generateBtn = document.getElementById('generate-btn');
-    const downloadAlbumBtn = document.getElementById('download-album-btn');
-    const downloadAllBtn = document.getElementById('download-all-btn');
+    let downloadAlbumBtn = document.getElementById('download-album-btn');
+    let downloadAllBtn = document.getElementById('download-all-btn');
 
-    console.log("App version: 1.2 - Download All button should be visible");
+    console.log("App version: 1.4 - Checking for Download All button");
+
+    // Fallback: Inject button if missing (fixes caching issues)
+    if (!downloadAllBtn) {
+        console.log("Button missing, injecting via JS...");
+        const actionsDiv = document.querySelector('.result-actions');
+        if (actionsDiv) {
+            downloadAllBtn = document.createElement('button');
+            downloadAllBtn.id = 'download-all-btn';
+            downloadAllBtn.className = 'btn btn-success';
+            downloadAllBtn.innerHTML = '<i class="fa-solid fa-download"></i> TÜMÜNÜ İNDİR';
+            downloadAllBtn.style.cssText = "background-color: #10b981 !important; color: white !important; display: inline-flex !important; opacity: 1 !important; visibility: visible !important;";
+            actionsDiv.insertBefore(downloadAllBtn, actionsDiv.firstChild);
+
+            // Re-fetch album button to ensure order or reference
+            downloadAlbumBtn = document.getElementById('download-album-btn');
+        }
+    }
 
     let generatedImages = []; // Store generated images for bulk download
 
