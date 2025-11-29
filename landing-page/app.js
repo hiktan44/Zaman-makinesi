@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadAlbumBtn = document.getElementById('download-album-btn');
     const downloadAllBtn = document.getElementById('download-all-btn');
 
+    console.log("App version: 1.2 - Download All button should be visible");
+
     let generatedImages = []; // Store generated images for bulk download
 
     let uploadedImage = null;
