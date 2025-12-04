@@ -64,7 +64,7 @@ const IntroPage: React.FC<IntroPageProps> = ({ onStart }) => {
                                         ></div>
                                         <div className="flex flex-col gap-6 @[480px]:min-w-[400px] @[480px]:gap-8 @[864px]:justify-center">
                                             <div className="flex flex-col gap-2 text-left">
-                                                <h1 className="text-text-light dark:text-text-dark text-4xl font-black leading-tight tracking-[-0.033em] @[480px]:text-5xl">Hatıralarınızı Zamanda Yolculuğa Çıkarın</h1>
+                                                <h1 className="text-text-light dark:text-text-dark text-4xl font-black leading-tight tracking-[-0.033em] @[480px]:text-5xl">Anılarınızı Zamanda Yolculuğa Çıkarın</h1>
                                                 <h2 className="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal @[480px]:text-base">Geçmişe ait bir fotoğrafınızı yükleyin, on yılı seçin ve sihrin gerçekleşmesini izleyin.</h2>
                                             </div>
                                             <button
