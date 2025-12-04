@@ -1,6 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
+ * TTTT
 */
 import React, { useState, ChangeEvent, useRef, useEffect } from 'react';
 import { generateDecadeImage } from './services/geminiService';
