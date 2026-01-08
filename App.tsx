@@ -10,7 +10,7 @@ import { createAlbumPage } from './lib/albumUtils';
 import { addTimestampToImage } from './lib/imageUtils';
 import { usePayment } from './contexts/PaymentContext';
 import { useAuth } from './contexts/AuthContext';
-import { logOut } from './services/authService';
+import { logOut } from './services/supabaseService';
 import { PRICING_TIERS } from './services/stripeService';
 import PricingModal from './components/PricingModal';
 import AuthModal from './components/AuthModal';
@@ -329,8 +329,8 @@ function App() {
                                 <div className="flex items-center gap-4 w-full sm:w-auto">
                                     {isAuthenticated && user ? (
                                         <div className="flex items-center gap-3">
-                                            {user.photoURL ? (
-                                                <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
+                                            {user.user_metadata?.avatar_url ? (
+                                                <img src={user.user_metadata.avatar_url} alt="Profile" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
                                             ) : (
                                                 <div className="w-10 h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-lg">
                                                     {user.email?.[0].toUpperCase() || 'U'}
@@ -338,7 +338,7 @@ function App() {
                                             )}
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-semibold text-stone-800 dark:text-stone-200">
-                                                    {user.displayName || user.email?.split('@')[0]}
+                                                    {user.user_metadata?.full_name || user.email?.split('@')[0]}
                                                 </span>
                                                 <button onClick={() => logOut()} className="text-xs text-stone-500 hover:text-red-500 text-left transition-colors">
                                                     Çıkış Yap

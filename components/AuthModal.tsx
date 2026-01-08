@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useState } from 'react';
-import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/authService';
+import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/supabaseService';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -37,13 +37,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         setLoading(true);
 
         try {
+            let result;
             if (isSignUp) {
-                await signUpWithEmail(email, password);
+                result = await signUpWithEmail(email, password);
             } else {
-                await signInWithEmail(email, password);
+                result = await signInWithEmail(email, password);
             }
-            onClose();
-            resetForm();
+
+            if (result.error) {
+                setError(result.error.message);
+            } else {
+                onClose();
+                resetForm();
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
