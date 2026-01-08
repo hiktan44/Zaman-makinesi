@@ -7,6 +7,13 @@ import React, { useState, ChangeEvent, useRef, useEffect } from 'react';
 import { generateDecadeImage } from './services/geminiService';
 import PolaroidCard from './components/PolaroidCard';
 import { createAlbumPage } from './lib/albumUtils';
+import { addTimestampToImage } from './lib/imageUtils';
+import { usePayment } from './contexts/PaymentContext';
+import { useAuth } from './contexts/AuthContext';
+import { logOut } from './services/authService';
+import { PRICING_TIERS } from './services/stripeService';
+import PricingModal from './components/PricingModal';
+import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import LandingPage, { ALL_DECADES } from './components/LandingPage';
@@ -47,8 +54,11 @@ function App() {
     const dragAreaRef = useRef<HTMLDivElement>(null);
     const isMobile = useMediaQuery('(max-width: 768px)');
 
-
     const [view, setView] = useState<'intro' | 'app'>('intro');
+    const [showPricingModal, setShowPricingModal] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const { credits, isPremium, useCredit, addCredits, setPremium } = usePayment();
+    const { user, isAuthenticated } = useAuth();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -78,6 +88,18 @@ function App() {
     const handleGenerateClick = async () => {
         if (!uploadedImage || selectedDecades.length === 0) return;
 
+        if (!isAuthenticated) {
+            setShowAuthModal(true);
+            return;
+        }
+
+        // Check if user has enough credits
+        if (!isPremium && credits < selectedDecades.length) {
+            alert(`Yetersiz kredi! ${selectedDecades.length} görsel oluşturmak için ${selectedDecades.length} krediye ihtiyacınız var. Mevcut krediniz: ${credits}`);
+            setShowPricingModal(true);
+            return;
+        }
+
         setIsLoading(true);
         setAppState('generating');
 
@@ -95,9 +117,18 @@ function App() {
             try {
                 // Pass the decade string directly. The service handles the English prompt construction.
                 const resultUrl = await generateDecadeImage(uploadedImage, decade);
+
+                // Add timestamp watermark to the generated image
+                const timestampedUrl = await addTimestampToImage(resultUrl, decade);
+
+                // Deduct credit for successful generation (only if not premium)
+                if (!isPremium) {
+                    useCredit();
+                }
+
                 setGeneratedImages(prev => ({
                     ...prev,
-                    [decade]: { status: 'done', url: resultUrl },
+                    [decade]: { status: 'done', url: timestampedUrl },
                 }));
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
@@ -148,9 +179,13 @@ function App() {
         try {
             // Pass the decade string directly
             const resultUrl = await generateDecadeImage(uploadedImage, decade);
+
+            // Add timestamp watermark to the regenerated image
+            const timestampedUrl = await addTimestampToImage(resultUrl, decade);
+
             setGeneratedImages(prev => ({
                 ...prev,
-                [decade]: { status: 'done', url: resultUrl },
+                [decade]: { status: 'done', url: timestampedUrl },
             }));
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
@@ -179,6 +214,43 @@ function App() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+    };
+
+    const handleDownloadAllImages = async () => {
+        setIsDownloading(true);
+        try {
+            const entries = Object.entries(generatedImages) as [string, GeneratedImage][];
+            const successfulImages = entries.filter(([, image]) => image.status === 'done' && image.url);
+
+            if (successfulImages.length === 0) {
+                alert("İndirilecek oluşturulmuş resim yok.");
+                return;
+            }
+
+            // Download each image with a small delay to avoid browser blocking
+            for (let i = 0; i < successfulImages.length; i++) {
+                const [decade, image] = successfulImages[i];
+                if (image.url) {
+                    const link = document.createElement('a');
+                    link.href = image.url;
+                    const safeDecade = decade.replace(/[^a-zA-Z0-9]/g, '');
+                    link.download = `zaman-makinesi-${safeDecade}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    // Small delay between downloads
+                    if (i < successfulImages.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Failed to download images:", error);
+            alert("Resimleri indirirken bir hata oluştu. Lütfen tekrar deneyin.");
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -222,6 +294,23 @@ function App() {
         }
     };
 
+    const handleSelectPlan = async (planType: 'PREMIUM' | 'PAY_AS_YOU_GO') => {
+        // In a real app, you would redirect to Stripe Checkout here
+        // For now, we'll simulate the purchase
+        alert(`Stripe ödeme sayfasına yönlendiriliyorsunuz...\n\nPlan: ${PRICING_TIERS[planType].name}\nFiyat: ₺${PRICING_TIERS[planType].price}`);
+
+        // Simulate successful payment (remove this in production)
+        if (planType === 'PREMIUM') {
+            setPremium(true);
+            alert('Premium üyelik aktif edildi!');
+        } else {
+            addCredits(PRICING_TIERS[planType].credits);
+            alert(`${PRICING_TIERS[planType].credits} kredi eklendi!`);
+        }
+
+        setShowPricingModal(false);
+    };
+
     if (view === 'intro') {
         return <IntroPage onStart={() => setView('app')} />;
     }
@@ -233,6 +322,64 @@ function App() {
                     <div className="px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40 flex flex-1 justify-center py-5">
                         <div className="layout-content-container flex flex-col w-full max-w-6xl flex-1">
                             <Header />
+
+                            {/* User & Credit Bar */}
+                            <div className="flex flex-col sm:flex-row gap-4 justify-between items-center py-4 px-6 bg-white/50 dark:bg-surface-dark/50 backdrop-blur-sm rounded-lg mb-4">
+                                {/* Left Side: User Info */}
+                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    {isAuthenticated && user ? (
+                                        <div className="flex items-center gap-3">
+                                            {user.photoURL ? (
+                                                <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-lg">
+                                                    {user.email?.[0].toUpperCase() || 'U'}
+                                                </div>
+                                            )}
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-semibold text-stone-800 dark:text-stone-200">
+                                                    {user.displayName || user.email?.split('@')[0]}
+                                                </span>
+                                                <button onClick={() => logOut()} className="text-xs text-stone-500 hover:text-red-500 text-left transition-colors">
+                                                    Çıkış Yap
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowAuthModal(true)}
+                                            className="flex items-center gap-2 bg-white dark:bg-stone-800 text-stone-800 dark:text-white px-5 py-2 rounded-full font-semibold border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 transition-all shadow-sm w-full sm:w-auto justify-center"
+                                        >
+                                            <span>👤</span>
+                                            <span>Giriş Yap / Üye Ol</span>
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Right Side: Credits & Upgrade */}
+                                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                    {isPremium ? (
+                                        <div className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full font-bold text-sm sm:text-base">
+                                            <span>👑</span>
+                                            <span>Premium</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 bg-yellow-400 text-black px-4 py-2 rounded-full font-bold text-sm sm:text-base">
+                                            <span>⚡</span>
+                                            <span>{credits} Kredi</span>
+                                        </div>
+                                    )}
+
+                                    {!isPremium && (
+                                        <button
+                                            onClick={() => setShowPricingModal(true)}
+                                            className="bg-stone-900 dark:bg-white text-white dark:text-black px-5 py-2 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg text-sm sm:text-base"
+                                        >
+                                            Yükselt
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
 
                             {(appState === 'idle' || appState === 'image-uploaded') && (
                                 <LandingPage
@@ -301,6 +448,13 @@ function App() {
                                                 >
                                                     {isDownloading ? 'Albüm Hazırlanıyor...' : 'Albümü İndir'}
                                                 </button>
+                                                <button
+                                                    onClick={handleDownloadAllImages}
+                                                    disabled={isDownloading}
+                                                    className={`${primaryButtonClasses} disabled:opacity-50 disabled:cursor-not-allowed py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
+                                                >
+                                                    {isDownloading ? 'İndiriliyor...' : 'Tümünü İndir'}
+                                                </button>
                                                 <button onClick={handleReset} className={`${secondaryButtonClasses} !text-text-light dark:!text-text-dark !border-stone-300 dark:!border-border-dark !bg-white/50 dark:!bg-surface-dark/50 hover:!bg-stone-100 dark:hover:!bg-surface-dark py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}>
                                                     Başa Dön
                                                 </button>
@@ -315,6 +469,19 @@ function App() {
                     </div>
                 </div>
             </div>
+
+            {/* Pricing Modal */}
+            <PricingModal
+                isOpen={showPricingModal}
+                onClose={() => setShowPricingModal(false)}
+                onSelectPlan={handleSelectPlan}
+            />
+
+            {/* Auth Modal */}
+            <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+            />
         </div>
     );
 }

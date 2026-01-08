@@ -7,6 +7,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { PaymentProvider } from './contexts/PaymentContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -17,7 +19,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ThemeProvider>
-      <App />
+      <AuthProvider>
+        <PaymentProvider>
+          <App />
+        </PaymentProvider>
+      </AuthProvider>
     </ThemeProvider>
   </React.StrictMode>
 );
