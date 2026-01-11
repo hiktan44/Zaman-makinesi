@@ -1,8 +1,11 @@
 import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { Sun, Moon, Settings, LogOut } from 'lucide-react';
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout, isAdmin } = useAuth();
 
   return (
     <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-stone-200 dark:border-border-dark px-4 sm:px-6 md:px-10 py-3">
@@ -13,8 +16,23 @@ const Header: React.FC = () => {
           </svg>
         </div>
         <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">Zaman Makinesi Fotoğrafları</h2>
+        {user && (
+          <div className="flex items-center gap-2 ml-4">
+            <div className="px-3 py-1 bg-yellow-400/20 dark:bg-yellow-400/30 rounded-lg border border-yellow-400">
+              <span className="text-sm font-medium text-yellow-600 dark:text-yellow-300">
+                💎 {user.credits} Kredi
+              </span>
+            </div>
+            <button
+              onClick={() => window.location.href = '/pricing'}
+              className="px-3 py-1 bg-primary text-background-dark text-sm font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+            >
+              Kredi Yükle
+            </button>
+          </div>
+        )}
       </div>
-      <nav className="flex flex-1 justify-end gap-4 md:gap-8">
+      <nav className="flex flex-1 justify-end gap-4 md:gap-8 items-center">
         <div className="hidden md:flex items-center gap-9">
           <a className="text-sm font-medium leading-normal text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">Galeri</a>
           <a className="text-sm font-medium leading-normal text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">SSS</a>
@@ -25,15 +43,29 @@ const Header: React.FC = () => {
           aria-label="Toggle theme"
         >
           {theme === 'dark' ? (
-            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
+            <Sun className="w-5 h-5 text-primary" />
           ) : (
-            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
+            <Moon className="w-5 h-5 text-primary" />
           )}
         </button>
+        {user && isAdmin && (
+          <button
+            onClick={() => window.location.href = '/admin'}
+            className="flex items-center justify-center gap-2 bg-primary text-background-dark font-medium px-4 py-2 rounded-lg hover:bg-yellow-500 transition-colors"
+          >
+            <Settings className="w-5 h-5" />
+            Admin Paneli
+          </button>
+        )}
+        {user && (
+          <button
+            onClick={logout}
+            className="flex items-center justify-center gap-2 text-sm font-medium text-text-light dark:text-text-dark hover:text-red-500 dark:hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            <LogOut className="w-5 h-5" />
+            Çıkış Yap
+          </button>
+        )}
       </nav>
     </header>
   );

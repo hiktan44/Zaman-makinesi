@@ -11,6 +11,10 @@ import Footer from './components/Footer';
 import Header from './components/Header';
 import LandingPage, { ALL_DECADES } from './components/LandingPage';
 import IntroPage from './components/IntroPage';
+import AdminPanel from './components/AdminPanel';
+import PricingPage from './components/PricingPage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LoginForm from './components/auth/LoginForm';
 
 type ImageStatus = 'pending' | 'done' | 'error';
 interface GeneratedImage {
@@ -37,7 +41,9 @@ const useMediaQuery = (query: string) => {
     return matches;
 };
 
-function App() {
+// Inner App Component
+function AppContent() {
+    const { user, token, isAuthenticated, isLoading: authLoading, login, logout, refreshCredits, isAdmin } = useAuth();
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImage>>({});
     const [selectedDecades, setSelectedDecades] = useState<string[]>([]);
@@ -47,8 +53,74 @@ function App() {
     const dragAreaRef = useRef<HTMLDivElement>(null);
     const isMobile = useMediaQuery('(max-width: 768px)');
 
+    const [view, setView] = useState<'intro' | 'app' | 'login' | 'admin' | 'pricing'>('intro');
 
-    const [view, setView] = useState<'intro' | 'app'>('intro');
+    // Auth state değiştiğinde yönlendirme
+    useEffect(() => {
+        if (!authLoading) {
+            // URL kontrolü
+            const pathname = window.location.pathname;
+            
+            // Pricing sayfası
+            if (pathname === '/pricing') {
+                setView('pricing');
+                return;
+            }
+            
+            // Admin sayfası
+            if (pathname === '/admin') {
+                if (isAuthenticated && isAdmin) {
+                    setView('admin');
+                } else {
+                    alert('Bu sayfaya erişim yetkiniz yok');
+                    setView('app');
+                }
+                return;
+            }
+            
+            // Eğer kullanıcı giriş yapmışsa
+            if (isAuthenticated && user) {
+                // Normal sayfa - eğer intro'daysa app'e geç
+                if (view === 'intro') {
+                    setView('app');
+                }
+            } else {
+                // Giriş yapmamış - intro'da kalsın
+                if (view === 'app' || view === 'admin' || view === 'pricing') {
+                    setView('intro');
+                }
+            }
+        }
+    }, [isAuthenticated, user, authLoading, isAdmin]);
+
+    // Kredi kullanma API call
+    const useCreditAPI = async (description: string, metadata?: any) => {
+        if (!user || !token) {
+            throw new Error('Giriş yapmanız gerekiyor');
+        }
+
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${API_URL}/image/use-credit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                userId: user.id,
+                description,
+                metadata,
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Kredi kullanılamadı');
+        }
+
+        await refreshCredits();
+        return data;
+    };
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -78,6 +150,18 @@ function App() {
     const handleGenerateClick = async () => {
         if (!uploadedImage || selectedDecades.length === 0) return;
 
+        // Kredi kontrolü
+        if (!user || !isAuthenticated) {
+            setView('login');
+            return;
+        }
+
+        const totalImages = selectedDecades.length;
+        if (user.credits < totalImages) {
+            alert(`Yetersiz kredi! Gereken: ${totalImages}, Mevcut: ${user.credits}. Lütfen kredi satın alın.`);
+            return;
+        }
+
         setIsLoading(true);
         setAppState('generating');
 
@@ -93,6 +177,9 @@ function App() {
 
         const processDecade = async (decade: string) => {
             try {
+                // Kredi kullan
+                await useCreditAPI(`Görsel üretimi: ${decade}`, { decade });
+
                 // Pass the decade string directly. The service handles the English prompt construction.
                 const resultUrl = await generateDecadeImage(uploadedImage, decade);
                 setGeneratedImages(prev => ({
@@ -131,6 +218,12 @@ function App() {
     const handleRegenerateDecade = async (decade: string) => {
         if (!uploadedImage) return;
 
+        // Kredi kontrolü
+        if (!user || user.credits < 1) {
+            alert('Yetersiz kredi! Lütfen kredi satın alın.');
+            return;
+        }
+
         // Prevent re-triggering if a generation is already in progress
         if (generatedImages[decade]?.status === 'pending') {
             return;
@@ -146,6 +239,9 @@ function App() {
 
         // Call the generation service for the specific decade
         try {
+            // Kredi kullan
+            await useCreditAPI(`Görsel yeniden üretimi: ${decade}`, { decade });
+
             // Pass the decade string directly
             const resultUrl = await generateDecadeImage(uploadedImage, decade);
             setGeneratedImages(prev => ({
@@ -222,8 +318,82 @@ function App() {
         }
     };
 
+    // Admin Panel
+    if (view === 'admin') {
+        if (!isAuthenticated || !isAdmin) {
+            return (
+                <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+                    <div className="text-center">
+                        <p className="text-xl text-text-light dark:text-text-dark mb-4">Yetkisiz erişim</p>
+                        <button
+                            onClick={() => setView('login')}
+                            className="px-6 py-3 bg-primary text-background-dark rounded-lg font-medium hover:bg-yellow-500"
+                        >
+                            Giriş Yap
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        return <AdminPanel />;
+    }
+
+    // Loading state
+    if (authLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    <p className="mt-4 text-text-light dark:text-text-dark">Yükleniyor...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (view === 'login') {
+        return (
+            <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center py-12 px-4">
+                <div className="max-w-md w-full">
+                    <div className="text-center mb-8">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
+                            <svg className="w-10 h-10 text-background-dark" fill="currentColor" viewBox="0 0 48 48">
+                                <path d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z"></path>
+                            </svg>
+                        </div>
+                        <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">Zaman Makinesi</h1>
+                        <p className="text-text-muted-light dark:text-text-muted-dark">Devam etmek için giriş yapın</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-surface-dark rounded-xl p-8 shadow-lg border border-stone-200 dark:border-border-dark">
+                        <LoginForm 
+                            onSuccess={() => setView('app')} 
+                            onGoogleClick={() => {
+                                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+                                window.location.href = `${API_URL}/auth/google`;
+                            }} 
+                        />
+                    </div>
+
+                    <div className="mt-6 text-center">
+                        <button
+                            onClick={() => setView('intro')}
+                            className="text-sm text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary"
+                        >
+                            ← Ana sayfaya dön
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (view === 'intro') {
-        return <IntroPage onStart={() => setView('app')} />;
+        return <IntroPage onStart={() => setView(user ? 'app' : 'login')} />;
+    }
+
+    if (view === 'pricing') {
+        return <PricingPage />;
     }
 
     return (
@@ -316,6 +486,15 @@ function App() {
                 </div>
             </div>
         </div>
+    );
+}
+
+// Main App with AuthProvider
+function App() {
+    return (
+        <AuthProvider>
+            <AppContent />
+        </AuthProvider>
     );
 }
 
