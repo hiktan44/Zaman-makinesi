@@ -134,16 +134,22 @@ export const handleWebhook = async (req: Request, res: Response) => {
   const sig = req.headers['stripe-signature'] as string;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
+  // Raw body'yi kullan (webhook middleware'i bunu req.rawBody'e koyar)
+  const rawBody = (req as any).rawBody || req.body;
+  
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (error) {
     console.error('Webhook signature hatası:', error);
+    console.error('Sig:', sig?.substring(0, 20) + '...');
     return res.status(400).json({ error: 'Geçersiz webhook signature' });
   }
 
   try {
+    console.log(`📩 Webhook event alındı: ${event.type}`);
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -196,7 +202,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
                   ]
                 );
 
-                console.log(`✅ Ödeme tamamlandı. ${credits} kredi eklendi. User ID: ${payment.user_id}`);
+                console.log(`✅ Checkout session tamamlandı. ${credits} kredi eklendi. User ID: ${payment.user_id}`);
               }
             }
           }
@@ -213,7 +219,15 @@ export const handleWebhook = async (req: Request, res: Response) => {
             "UPDATE payments SET status = 'failed' WHERE id = $1",
             [parseInt(paymentId)]
           );
+          console.log(`⏰ Checkout session expir edildi. Payment ID: ${paymentId}`);
         }
+        break;
+      }
+
+      case 'payment_intent.succeeded': {
+        // Payment intent succeeded - bu event'i log'la ama işlem yapma
+        // Checkout session.completed event'i işlenecek
+        console.log(`💳 Payment intent succeeded (checkout session tarafından işlenecek)`);
         break;
       }
 

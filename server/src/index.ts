@@ -27,8 +27,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Stripe webhook için raw body parsing
-app.use('/api/payments/webhook', bodyParser.raw({ type: 'application/json' }));
+// Not: Stripe webhook raw body parsing, paymentRoutes.ts'de route-specific olarak yapılıyor
 
 // Passport middleware
 app.use(passport.initialize());
