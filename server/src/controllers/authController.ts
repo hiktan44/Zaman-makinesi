@@ -53,14 +53,14 @@ export const register = async (req: Request, res: Response) => {
 
     // JWT token oluştur
     const payload: JwtPayload = {
-      userId: user.id,
+      id: user.id,
       email: user.email,
-      isAdmin: user.is_admin,
+      is_admin: user.is_admin,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET!, {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    });
+    } as any);
 
     res.status(201).json({
       message: 'Kayıt başarılı',
@@ -123,14 +123,14 @@ export const login = async (req: Request, res: Response) => {
 
     // JWT token oluştur
     const payload: JwtPayload = {
-      userId: user.id,
+      id: user.id,
       email: user.email,
-      isAdmin: user.is_admin,
+      is_admin: user.is_admin,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET!, {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    });
+    } as any);
 
     res.json({
       message: 'Giriş başarılı',
@@ -153,6 +153,10 @@ export const login = async (req: Request, res: Response) => {
  */
 export const getMe = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Oturum bulunamadı' });
+    }
+
     const userId = req.user.id;
 
     const result = await query(
@@ -184,18 +188,22 @@ export const googleAuth = (req: Request, res: Response, next: any) => {
  */
 export const googleCallback = (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Oturum bulunamadı' });
+    }
+
     const user = req.user as any;
     
     // JWT token oluştur
     const payload: JwtPayload = {
-      userId: user.id,
+      id: user.id,
       email: user.email,
-      isAdmin: user.is_admin,
+      is_admin: user.is_admin,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET!, {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    });
+    } as any);
 
     // Frontend'e yönlendir
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';

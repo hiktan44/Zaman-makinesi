@@ -38,7 +38,7 @@ passport.use(
           );
           
           // Aktivite kaydı
-          await logActivity(newUser.rows[0].id, 'registration', 0, 'Google ile kayıt olundu');
+          await logActivity(newUser.rows[0].id, 'registration', 0, 'Google ile kayıt oldu');
           
           return done(null, newUser.rows[0]);
         } else {
@@ -69,7 +69,7 @@ passport.use(
     },
     async (payload: JwtPayload, done: any) => {
       try {
-        const result = await query('SELECT * FROM users WHERE id = $1', [payload.userId]);
+        const result = await query('SELECT * FROM users WHERE id = $1', [payload.id]);
         
         if (result.rows.length === 0) {
           return done(null, false);

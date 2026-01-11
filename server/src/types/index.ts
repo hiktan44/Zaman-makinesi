@@ -45,9 +45,9 @@ export interface SystemSetting {
 }
 
 export interface JwtPayload {
-  userId: number;
+  id: number;
   email: string;
-  isAdmin: boolean;
+  is_admin: boolean;
 }
 
 export interface GoogleProfile {

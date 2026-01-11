@@ -6,6 +6,10 @@ import { query } from '../config/database';
  */
 export const getCredits = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Oturum bulunamadı' });
+    }
+
     const userId = req.user.id;
 
     const result = await query(
@@ -70,6 +74,10 @@ export const useCredit = async (userId: number, description: string, metadata?: 
  */
 export const addCredits = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Oturum bulunamadı' });
+    }
+
     const { userId, amount, reason } = req.body;
 
     if (!userId || !amount || amount <= 0) {
