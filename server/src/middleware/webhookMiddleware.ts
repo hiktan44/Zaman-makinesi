@@ -12,12 +12,15 @@ export const webhookRawBody = (req: Request, res: Response, next: NextFunction) 
   req.setEncoding('utf8');
 
   req.on('data', (chunk) => {
+    console.log('📦 Data chunk alındı, boyut:', chunk.length);
     data += chunk;
   });
 
   req.on('end', () => {
     console.log('✅ Raw body tamamlandı, boyut:', data.length);
+    console.log('📝 Raw body preview:', data.substring(0, 100));
     (req as any).rawBody = Buffer.from(data);
+    console.log('✅ next() çağrılıyor');
     next();
   });
 
@@ -25,4 +28,12 @@ export const webhookRawBody = (req: Request, res: Response, next: NextFunction) 
     console.error('❌ Webhook middleware hatası:', err);
     next(err);
   });
+
+  // Zaman aşımı kontrolü - 10 saniye içinde veri gelmezse devam et
+  setTimeout(() => {
+    if (data === '') {
+      console.error('⏰ Timeout: 10 saniye içinde veri alınamadı');
+      next();
+    }
+  }, 10000);
 };
