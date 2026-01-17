@@ -18,3 +18,7 @@ router.post('/payments/webhook', webhookRawBody, handleWebhook);
 router.get('/payments', authenticateToken, getUserPayments);
 
 export default router;
+
+// Webhook route'unu ayrı export et (raw body gerektiği için)
+export const webhookRouter = Router();
+webhookRouter.post('/payments/webhook', webhookRawBody, handleWebhook);

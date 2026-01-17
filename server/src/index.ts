@@ -8,7 +8,7 @@ import passport from './config/passport';
 // Routes
 import authRoutes from './routes/authRoutes';
 import creditRoutes from './routes/creditRoutes';
-import paymentRoutes from './routes/paymentRoutes';
+import paymentRoutes, { webhookRouter } from './routes/paymentRoutes';
 import adminRoutes from './routes/adminRoutes';
 
 // Services
@@ -26,7 +26,7 @@ app.use(cors({
 }));
 
 // Önemli: Stripe webhook route'u ÖNCE tanımlanmalı çünkü raw body gerekiyor
-app.use('/api', paymentRoutes);
+app.use('/api', webhookRouter);
 
 // Diğer JSON parsing middleware'leri
 app.use(express.json());
@@ -58,6 +58,7 @@ app.get('/api', (req: Request, res: Response) => {
 });
 
 // API Routes
+app.use('/api', paymentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/admin', adminRoutes);
