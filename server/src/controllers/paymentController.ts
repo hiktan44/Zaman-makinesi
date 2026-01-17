@@ -131,11 +131,20 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
  * Stripe webhook handler
  */
 export const handleWebhook = async (req: Request, res: Response) => {
+  console.log('🔔 Webhook endpoint çağrıldı');
+  
   const sig = req.headers['stripe-signature'] as string;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
+  console.log('📋 Headers:', Object.keys(req.headers));
+  console.log('🔑 Stripe Signature:', sig ? sig.substring(0, 20) + '...' : 'Yok');
+  console.log('🔐 Webhook Secret:', webhookSecret ? webhookSecret.substring(0, 20) + '...' : 'Yok');
+
   // Raw body'yi kullan (webhook middleware'i bunu req.rawBody'e koyar)
   const rawBody = (req as any).rawBody;
+  
+  console.log('📦 Raw Body exists:', !!rawBody);
+  console.log('📦 Raw Body length:', rawBody ? rawBody.length : 0);
   
   if (!rawBody) {
     console.error('Raw body bulunamadı!');
@@ -147,27 +156,37 @@ export const handleWebhook = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Stripe signature gerekli' });
   }
 
-  if (!webhookSecret || webhookSecret === 'whsec_your-webhook-secret') {
-    console.error('STRIPE_WEBHOOK_SECRET doğru ayarlanmamış!');
+  if (!webhookSecret) {
+    console.error('❌ STRIPE_WEBHOOK_SECRET tanımlı değil!');
+    return res.status(500).json({ error: 'Webhook secret yapılandırma hatası' });
+  }
+
+  if (webhookSecret === 'whsec_your-webhook-secret') {
+    console.error('❌ STRIPE_WEBHOOK_SECRET placeholder değerinde!');
     return res.status(500).json({ error: 'Webhook secret yapılandırma hatası' });
   }
   
   let event: Stripe.Event;
 
   try {
+    console.log('🔐 Signature doğrulanıyor...');
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    console.log('✅ Signature doğrulandı');
   } catch (error: any) {
-    console.error('Webhook signature hatası:', error);
+    console.error('❌ Webhook signature hatası:', error.message);
     console.error('Sig:', sig ? sig.substring(0, 20) + '...' : 'Yok');
     console.error('Webhook Secret:', webhookSecret ? webhookSecret.substring(0, 20) + '...' : 'Yok');
-    return res.status(400).json({ error: 'Geçersiz webhook signature' });
+    console.error('Raw Body:', rawBody ? rawBody.toString().substring(0, 100) : 'Yok');
+    return res.status(400).json({ error: 'Geçersiz webhook signature: ' + error.message });
   }
 
   try {
     console.log(`📩 Webhook event alındı: ${event.type}`);
+    console.log(`📊 Event ID: ${event.id}`);
 
     switch (event.type) {
       case 'checkout.session.completed': {
+        console.log('🎉 Checkout session completed event işleniyor');
         const session = event.data.object as Stripe.Checkout.Session;
         const paymentId = session.metadata?.payment_id;
 
@@ -227,6 +246,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
       }
 
       case 'checkout.session.expired': {
+        console.log('⏰ Checkout session expired event işleniyor');
         const session = event.data.object as Stripe.Checkout.Session;
         const paymentId = session.metadata?.payment_id;
 
@@ -241,10 +261,15 @@ export const handleWebhook = async (req: Request, res: Response) => {
       }
 
       case 'payment_intent.succeeded': {
-        // Payment intent succeeded - bu event'i log'la ama işlem yapma
-        // Checkout session.completed event'i işlenecek
-        console.log(`💳 Payment intent succeeded (checkout session tarafından işlenecek)`);
-        break;
+        console.log('💳 Payment intent succeeded event alındı');
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log('💳 Payment Intent Metadata:', paymentIntent.metadata);
+        console.log('💳 Payment Intent ID:', paymentIntent.id);
+        
+        // Bu event'te metadata yok, checkout.session.completed event'ini beklemeliyiz
+        console.log('ℹ️  Bu event metadata içermiyor, checkout.session.completed event\'ini bekliyoruz');
+        res.json({ received: true, note: 'Waiting for checkout.session.completed' });
+        return;
       }
 
       default:
