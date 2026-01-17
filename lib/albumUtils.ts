@@ -63,16 +63,16 @@ export async function createAlbumPage(imageData: Record<string, string>, addCred
     // Updated for dynamic number of images
     const cols = 3;
     const rows = Math.ceil(decades.length / cols);
-    const grid = { cols, rows, padding: 60 };
-    const contentTopMargin = 300; // Space for the header
+    const grid = { cols, rows, padding: 40 }; // Padding'i küçült
+    const contentTopMargin = 280; // Space for the header (küçült)
     const contentHeight = canvasHeight - contentTopMargin;
     const cellWidth = (canvasWidth - grid.padding * (grid.cols + 1)) / grid.cols;
     const cellHeight = (contentHeight - grid.padding * (grid.rows + 1)) / grid.rows;
 
     // Calculate polaroid dimensions to fit inside the grid cell with a margin
-    const polaroidAspectRatio = 1.2; // height is 1.2 times width
-    const maxPolaroidWidth = cellWidth * 0.9;
-    const maxPolaroidHeight = cellHeight * 0.9;
+    const polaroidAspectRatio = 1.1; // height is 1.1 times width (daha kareye yakın)
+    const maxPolaroidWidth = cellWidth * 0.95; // Daha büyük (0.9 -> 0.95)
+    const maxPolaroidHeight = cellHeight * 0.95; // Daha büyük (0.9 -> 0.95)
 
     let polaroidWidth = maxPolaroidWidth;
     let polaroidHeight = polaroidWidth * polaroidAspectRatio;
