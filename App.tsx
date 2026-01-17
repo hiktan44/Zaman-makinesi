@@ -13,6 +13,8 @@ import LandingPage, { ALL_DECADES } from './components/LandingPage';
 import IntroPage from './components/IntroPage';
 import AdminPanel from './components/AdminPanel';
 import PricingPage from './components/PricingPage';
+import PaymentSuccessPage from './components/PaymentSuccessPage';
+import PaymentCancelPage from './components/PaymentCancelPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 
@@ -53,13 +55,25 @@ function AppContent() {
     const dragAreaRef = useRef<HTMLDivElement>(null);
     const isMobile = useMediaQuery('(max-width: 768px)');
 
-    const [view, setView] = useState<'intro' | 'app' | 'login' | 'admin' | 'pricing'>('intro');
+    const [view, setView] = useState<'intro' | 'app' | 'login' | 'admin' | 'pricing' | 'payment-success' | 'payment-cancel'>('intro');
 
     // Auth state değiştiğinde yönlendirme
     useEffect(() => {
         if (!authLoading) {
             // URL kontrolü
             const pathname = window.location.pathname;
+            
+            // Payment success sayfası
+            if (pathname === '/payment/success') {
+                setView('payment-success');
+                return;
+            }
+            
+            // Payment cancel sayfası
+            if (pathname === '/payment/cancel') {
+                setView('payment-cancel');
+                return;
+            }
             
             // Pricing sayfası
             if (pathname === '/pricing') {
@@ -88,6 +102,11 @@ function AppContent() {
                 // Giriş yapmamış - intro'da kalsın
                 if (view === 'app' || view === 'admin' || view === 'pricing') {
                     setView('intro');
+                }
+                
+                // Payment sayfaları için giriş gerekmez
+                if (view === 'payment-success' || view === 'payment-cancel') {
+                    return;
                 }
             }
         }
@@ -394,6 +413,14 @@ function AppContent() {
 
     if (view === 'pricing') {
         return <PricingPage />;
+    }
+
+    if (view === 'payment-success') {
+        return <PaymentSuccessPage />;
+    }
+
+    if (view === 'payment-cancel') {
+        return <PaymentCancelPage />;
     }
 
     return (
