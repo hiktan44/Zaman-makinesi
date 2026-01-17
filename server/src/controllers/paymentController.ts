@@ -135,15 +135,31 @@ export const handleWebhook = async (req: Request, res: Response) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
   // Raw body'yi kullan (webhook middleware'i bunu req.rawBody'e koyar)
-  const rawBody = (req as any).rawBody || req.body;
+  const rawBody = (req as any).rawBody;
+  
+  if (!rawBody) {
+    console.error('Raw body bulunamadı!');
+    return res.status(400).json({ error: 'Raw body gerekli' });
+  }
+
+  if (!sig) {
+    console.error('Stripe signature bulunamadı!');
+    return res.status(400).json({ error: 'Stripe signature gerekli' });
+  }
+
+  if (!webhookSecret || webhookSecret === 'whsec_your-webhook-secret') {
+    console.error('STRIPE_WEBHOOK_SECRET doğru ayarlanmamış!');
+    return res.status(500).json({ error: 'Webhook secret yapılandırma hatası' });
+  }
   
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Webhook signature hatası:', error);
-    console.error('Sig:', sig?.substring(0, 20) + '...');
+    console.error('Sig:', sig ? sig.substring(0, 20) + '...' : 'Yok');
+    console.error('Webhook Secret:', webhookSecret ? webhookSecret.substring(0, 20) + '...' : 'Yok');
     return res.status(400).json({ error: 'Geçersiz webhook signature' });
   }
 

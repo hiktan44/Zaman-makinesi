@@ -1,10 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
-import bodyParser from 'body-parser';
 
 // Stripe webhook için raw body middleware
-export const webhookRawBody = bodyParser.raw({
-  type: 'application/json',
-  verify: (req: any, res, buf) => {
-    req.rawBody = buf;
-  }
-});
+export const webhookRawBody = (req: Request, res: Response, next: NextFunction) => {
+  let data = '';
+
+  req.setEncoding('utf8');
+
+  req.on('data', (chunk) => {
+    data += chunk;
+  });
+
+  req.on('end', () => {
+    (req as any).rawBody = Buffer.from(data);
+    next();
+  });
+};
