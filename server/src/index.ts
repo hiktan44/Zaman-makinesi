@@ -24,6 +24,11 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
 }));
+
+// Önemli: Stripe webhook route'u ÖNCE tanımlanmalı çünkü raw body gerekiyor
+app.use('/api', paymentRoutes);
+
+// Diğer JSON parsing middleware'leri
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -55,7 +60,6 @@ app.get('/api', (req: Request, res: Response) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/credits', creditRoutes);
-app.use('/api', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Özel endpoint: Görsel üretimi için kredi kullan

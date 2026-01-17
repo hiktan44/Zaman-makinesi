@@ -5,7 +5,8 @@ export const webhookRawBody = (req: Request, res: Response, next: NextFunction) 
   console.log('🚀 Webhook middleware çağrıldı');
   console.log('📋 Method:', req.method);
   console.log('📋 URL:', req.url);
-  console.log('📋 Headers:', Object.keys(req.headers));
+  console.log('📋 Content-Type:', req.get('content-type'));
+  console.log('📋 Content-Length:', req.get('content-length'));
   
   let data = '';
 
@@ -18,7 +19,9 @@ export const webhookRawBody = (req: Request, res: Response, next: NextFunction) 
 
   req.on('end', () => {
     console.log('✅ Raw body tamamlandı, boyut:', data.length);
-    console.log('📝 Raw body preview:', data.substring(0, 100));
+    if (data.length > 0) {
+      console.log('📝 Raw body preview:', data.substring(0, 100));
+    }
     (req as any).rawBody = Buffer.from(data);
     console.log('✅ next() çağrılıyor');
     next();
@@ -28,12 +31,4 @@ export const webhookRawBody = (req: Request, res: Response, next: NextFunction) 
     console.error('❌ Webhook middleware hatası:', err);
     next(err);
   });
-
-  // Zaman aşımı kontrolü - 10 saniye içinde veri gelmezse devam et
-  setTimeout(() => {
-    if (data === '') {
-      console.error('⏰ Timeout: 10 saniye içinde veri alınamadı');
-      next();
-    }
-  }, 10000);
 };
