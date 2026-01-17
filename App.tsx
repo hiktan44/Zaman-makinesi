@@ -318,7 +318,7 @@ function AppContent() {
             }
 
             // Ask the user if they want to add the credit
-            const addCredit = window.confirm("Albüm resimlerinin alt köşesine 'Hikmet Tanrıverdi tarafından oluşturuldu' yazısı eklensin mi?");
+            const addCredit = window.confirm("Albüm resimlerinin alt köşesine 'zamanmakinesi.app tarafından oluşturuldu' yazısı eklensin mi?");
 
             const albumDataUrl = await createAlbumPage(imageData, addCredit);
 
@@ -332,6 +332,40 @@ function AppContent() {
         } catch (error) {
             console.error("Failed to create or download album:", error);
             alert("Üzgünüz, albümünüz oluşturulurken bir hata meydana geldi. Lütfen tekrar deneyin.");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    const handleDownloadAllImages = async () => {
+        setIsDownloading(true);
+        try {
+            const entries = Object.entries(generatedImages) as [string, GeneratedImage][];
+            const completedImages = entries.filter(([, image]) => image.status === 'done' && image.url);
+
+            if (completedImages.length === 0) {
+                alert("İndirilecek oluşturulmuş resim yok.");
+                return;
+            }
+
+            // Her resmi sırayla indir
+            for (const [decade, image] of completedImages) {
+                if (image.url) {
+                    const link = document.createElement('a');
+                    link.href = image.url;
+                    const safeDecade = decade.replace(/[^a-zA-Z0-9]/g, '');
+                    link.download = `past-forward-${safeDecade}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // İndirmeler arası kısa bir bekleme
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+            }
+        } catch (error) {
+            console.error("Failed to download all images:", error);
+            alert("Üzgünüz, resimler indirilirken bir hata meydana geldi. Lütfen tekrar deneyin.");
         } finally {
             setIsDownloading(false);
         }
@@ -490,15 +524,22 @@ function AppContent() {
                                     )}
                                     <div className="h-24 mt-8 flex items-center justify-center z-20 w-full px-4 sm:px-0">
                                         {appState === 'results-shown' && (
-                                            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-stone-200 dark:border-border-dark shadow-2xl w-full sm:w-auto max-w-md sm:max-w-none">
+                                            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-stone-200 dark:border-border-dark shadow-2xl w-full sm:w-auto max-w-lg sm:max-w-none">
                                                 <button
                                                     onClick={handleDownloadAlbum}
                                                     disabled={isDownloading}
-                                                    className={`${primaryButtonClasses} disabled:opacity-50 disabled:cursor-not-allowed py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
+                                                    className={`${primaryButtonClasses} disabled:opacity-50 disabled:cursor-not-allowed py-3 px-5 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
                                                 >
-                                                    {isDownloading ? 'Albüm Hazırlanıyor...' : 'Albümü İndir'}
+                                                    {isDownloading ? 'İndiriliyor...' : 'Albümü İndir'}
                                                 </button>
-                                                <button onClick={handleReset} className={`${secondaryButtonClasses} !text-text-light dark:!text-text-dark !border-stone-300 dark:!border-border-dark !bg-white/50 dark:!bg-surface-dark/50 hover:!bg-stone-100 dark:hover:!bg-surface-dark py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}>
+                                                <button
+                                                    onClick={handleDownloadAllImages}
+                                                    disabled={isDownloading}
+                                                    className={`${secondaryButtonClasses} !text-text-light dark:!text-text-dark !border-stone-300 dark:!border-border-dark !bg-white/50 dark:!bg-surface-dark/50 hover:!bg-stone-100 dark:hover:!bg-surface-dark py-3 px-5 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
+                                                >
+                                                    {isDownloading ? 'İndiriliyor...' : 'Tüm Resimleri İndir'}
+                                                </button>
+                                                <button onClick={handleReset} className={`${secondaryButtonClasses} !text-text-light dark:!text-text-dark !border-stone-300 dark:!border-border-dark !bg-white/50 dark:!bg-surface-dark/50 hover:!bg-stone-100 dark:hover:!bg-surface-dark py-3 px-5 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}>
                                                     Başa Dön
                                                 </button>
                                             </div>
