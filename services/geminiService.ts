@@ -14,7 +14,7 @@ if (!API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-3-pro-image-preview" });
+const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-image-preview" });
 
 // --- Helper Functions ---
 
@@ -78,53 +78,6 @@ function getFriendlyErrorMessage(error: unknown): string {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function processGeminiResponse(response: any): string {
-    // The structure of response in @google/generative-ai is different.
-    // Usually response.response.text() gives text.
-    // But we are expecting an image generation model or multimodal output.
-    // Wait, gemini-1.5-flash is a text/multimodal model, it generates TEXT/JSON.
-    // It does NOT generate images directly like Imagen.
-    // However, the user's previous code was expecting `inlineData` in the response.
-    // If the user wants IMAGE GENERATION, they need an image generation model (Imagen).
-    // BUT, Gemini 1.5 Flash CANNOT generate images. It can only analyze them.
-    //
-    // CRITICAL REALIZATION: The user wants to "Reimagine the person...".
-    // If they were using "gemini-2.5-flash-image" maybe that was a special model?
-    // Or maybe they were using a tool that returns base64 images?
-    //
-    // If we are using Gemini 1.5 Flash, it will return a TEXT description of the image, NOT an image.
-    // UNLESS we are using it to prompt an image generation tool?
-    //
-    // However, based on the previous code `imagePartFromResponse.inlineData`, the previous code EXPECTED an image back.
-    // This implies the model used previously WAS capable of returning images (like Imagen).
-    //
-    // Since standard Gemini 1.5 Flash cannot generate images, we have a problem.
-    // But the user said "gemini 3 resim oluşturuyordu".
-    //
-    // Let's assume for a moment the user mistakenly thinks Gemini generates images, OR they have access to a model that does.
-    // OR, the previous code was actually receiving a text description and the user thought it was an image? No, the code checks for `inlineData`.
-    //
-    // If I use `gemini-1.5-flash`, I will get text.
-    // If I want images, I need `imagen-3.0-generate-001`.
-    // But that failed with 404.
-    //
-    // Let's try to use `gemini-1.5-flash` but maybe the user's prompt implies they want a description?
-    // No, "The output must be a photorealistic image".
-    //
-    // HYPOTHESIS: The user has access to a model that generates images, but we don't know the name.
-    // OR, we should use `gemini-pro-vision` (deprecated) or similar?
-    //
-    // Wait, let's look at the `processGeminiResponse` in the OLD code (before I touched it today).
-    // It was checking `response.candidates?.[0]?.content?.parts?.find(part => part.inlineData)`.
-    // This structure is standard for Gemini API responses.
-    //
-    // If the user insists on "gemini 3", maybe they mean `gemini-1.5-pro` with some capability?
-    //
-    // Let's stick to the plan of using `@google/generative-ai` and `gemini-1.5-flash`.
-    // If it returns text, we will see it in the logs.
-    // But wait, if it returns text, `processGeminiResponse` will fail.
-    //
-    // Let's implement the standard `generateContent` call.
-
     const candidate = response.response.candidates?.[0];
     const imagePart = candidate?.content?.parts?.find((part: Part) => part.inlineData);
 

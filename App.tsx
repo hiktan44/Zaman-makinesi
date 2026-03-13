@@ -132,7 +132,20 @@ function AppContent() {
             }),
         });
 
-        const data = await response.json();
+        // 401 = Token geçersiz/expire olmuş - yeniden giriş gerekiyor
+        if (response.status === 401) {
+            logout();
+            setView('login');
+            throw new Error('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            throw new Error('Sunucudan geçersiz yanıt alındı');
+        }
+
         if (!response.ok) {
             throw new Error(data.error || 'Kredi kullanılamadı');
         }
