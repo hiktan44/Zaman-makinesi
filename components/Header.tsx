@@ -1,8 +1,11 @@
 import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useT } from '../lib/useT';
+import LangSwitch from './LangSwitch';
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { t } = useT();
 
   return (
     <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-stone-200 dark:border-border-dark px-4 sm:px-6 md:px-10 py-3">
@@ -12,13 +15,14 @@ const Header: React.FC = () => {
             <path d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z"></path>
           </svg>
         </div>
-        <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">Zaman Makinesi Fotoğrafları</h2>
+        <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">{t('nav.title')}</h2>
       </div>
       <nav className="flex flex-1 justify-end gap-4 md:gap-8">
         <div className="hidden md:flex items-center gap-9">
-          <a className="text-sm font-medium leading-normal text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">Galeri</a>
-          <a className="text-sm font-medium leading-normal text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">SSS</a>
+          <a className="text-sm font-medium leading-normal text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">{t('nav.gallery')}</a>
+          <a className="text-sm font-medium leading-normal text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">{t('nav.faq')}</a>
         </div>
+        <LangSwitch />
         <button
           onClick={toggleTheme}
           className="flex items-center justify-center w-10 h-10 rounded-lg bg-stone-100 dark:bg-surface-dark border border-stone-200 dark:border-border-dark hover:bg-stone-200 dark:hover:bg-border-dark transition-colors"

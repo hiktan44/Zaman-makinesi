@@ -57,6 +57,7 @@ export async function createCheckoutSession(
         const session = await response.json();
 
         // Redirect to Stripe Checkout
+        // @ts-ignore - redirectToCheckout may not be in the type definitions
         const result = await stripe.redirectToCheckout({
             sessionId: session.id,
         });

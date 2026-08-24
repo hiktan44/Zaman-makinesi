@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { PRICING_TIERS } from '../services/stripeService';
+import { useT } from '../lib/useT';
 
 interface PricingModalProps {
     isOpen: boolean;
@@ -12,6 +13,7 @@ interface PricingModalProps {
 }
 
 export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingModalProps) {
+    const { t } = useT();
     if (!isOpen) return null;
 
     return (
@@ -28,8 +30,8 @@ export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingM
 
                 {/* Header */}
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-8 text-center">
-                    <h2 className="text-4xl font-bold text-white mb-2">Fiyatlandırma</h2>
-                    <p className="text-white/90 text-lg">Size en uygun planı seçin</p>
+                    <h2 className="text-4xl font-bold text-white mb-2">{t('pricing.title')}</h2>
+                    <p className="text-white/90 text-lg">{t('pricing.subtitle')}</p>
                 </div>
 
                 {/* Pricing Cards */}
@@ -44,7 +46,7 @@ export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingM
                                 ₺0
                             </div>
                             <p className="text-stone-600 dark:text-stone-400 text-sm">
-                                {PRICING_TIERS.FREE.credits} görsel
+                                {PRICING_TIERS.FREE.credits} {t('pricing.visuals')}
                             </p>
                         </div>
                         <ul className="space-y-3 mb-6">
@@ -59,14 +61,14 @@ export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingM
                             onClick={onClose}
                             className="w-full py-3 px-6 bg-stone-200 dark:bg-stone-700 text-stone-800 dark:text-white rounded-lg font-semibold hover:bg-stone-300 dark:hover:bg-stone-600 transition-colors"
                         >
-                            Mevcut Plan
+                            {t('pricing.currentPlan')}
                         </button>
                     </div>
 
                     {/* Pay As You Go */}
                     <div className="border-2 border-yellow-400 rounded-xl p-6 hover:shadow-lg transition-shadow relative">
                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black px-4 py-1 rounded-full text-sm font-bold">
-                            Popüler
+                            {t('pricing.popular')}
                         </div>
                         <div className="text-center mb-6">
                             <h3 className="text-2xl font-bold text-stone-800 dark:text-text-dark mb-2">
@@ -76,7 +78,7 @@ export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingM
                                 ₺{PRICING_TIERS.PAY_AS_YOU_GO.price}
                             </div>
                             <p className="text-stone-600 dark:text-stone-400 text-sm">
-                                {PRICING_TIERS.PAY_AS_YOU_GO.credits} görsel
+                                {PRICING_TIERS.PAY_AS_YOU_GO.credits} {t('pricing.visuals')}
                             </p>
                         </div>
                         <ul className="space-y-3 mb-6">
@@ -91,7 +93,7 @@ export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingM
                             onClick={() => onSelectPlan('PAY_AS_YOU_GO')}
                             className="w-full py-3 px-6 bg-yellow-400 text-black rounded-lg font-semibold hover:bg-yellow-500 transition-colors shadow-lg"
                         >
-                            Satın Al
+                            {t('pricing.buy')}
                         </button>
                     </div>
 
@@ -105,7 +107,7 @@ export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingM
                                 ₺{PRICING_TIERS.PREMIUM.price}
                             </div>
                             <p className="text-stone-600 dark:text-stone-400 text-sm">
-                                Sınırsız görsel
+                                {t('pricing.unlimited')}
                             </p>
                         </div>
                         <ul className="space-y-3 mb-6">
@@ -120,7 +122,7 @@ export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingM
                             onClick={() => onSelectPlan('PREMIUM')}
                             className="w-full py-3 px-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-colors shadow-lg"
                         >
-                            Premium'a Geç
+                            {t('pricing.upgrade')}
                         </button>
                     </div>
                 </div>
@@ -128,7 +130,7 @@ export default function PricingModal({ isOpen, onClose, onSelectPlan }: PricingM
                 {/* Footer */}
                 <div className="bg-stone-50 dark:bg-stone-900 p-6 text-center border-t border-stone-200 dark:border-border-dark">
                     <p className="text-stone-600 dark:text-stone-400 text-sm">
-                        Tüm ödemeler Stripe ile güvenli bir şekilde işlenir
+                        {t('pricing.secure')}
                     </p>
                 </div>
             </div>

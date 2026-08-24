@@ -1,4 +1,5 @@
 import React, { ChangeEvent, useRef } from 'react';
+import { useT } from '../lib/useT';
 
 interface LandingPageProps {
     onImageUpload: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -25,6 +26,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
     onClearAll,
     onGenerate
 }) => {
+    const { t } = useT();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleDrop = (e: React.DragEvent) => {
@@ -47,8 +49,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
             <div className="px-4 sm:px-6 md:px-10">
                 <div className="flex flex-wrap justify-between gap-3 mb-8">
                     <div className="flex flex-col gap-3">
-                        <p className="text-4xl font-black leading-tight tracking-[-0.033em] text-text-light dark:text-text-dark">Zamanda Yolculuk</p>
-                        <p className="text-base font-normal leading-normal text-text-muted-light dark:text-text-muted-dark">1. Fotoğraf Yükle → 2. Yılları Seç → 3. Yolculuğa Başla.</p>
+                        <p className="text-4xl font-black leading-tight tracking-[-0.033em] text-text-light dark:text-text-dark">{t('landing.timeTravel')}</p>
+                        <p className="text-base font-normal leading-normal text-text-muted-light dark:text-text-muted-dark">{t('landing.steps')}</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
@@ -63,8 +65,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
                                     <img src={uploadedImage} alt="Uploaded" className="max-h-64 object-contain rounded-lg shadow-md" />
                                 ) : (
                                     <>
-                                        <p className="text-lg font-bold leading-tight tracking-[-0.015em] text-center text-text-light dark:text-text-dark">Fotoğrafını Buraya Sürükle ve Bırak</p>
-                                        <p className="text-sm font-normal leading-normal text-center text-text-muted-light dark:text-text-muted-dark">veya dosya seç. Kabul edilenler: JPG, PNG, maks 5MB.</p>
+                                        <p className="text-lg font-bold leading-tight tracking-[-0.015em] text-center text-text-light dark:text-text-dark">{t('landing.dragDrop')}</p>
+                                        <p className="text-sm font-normal leading-normal text-center text-text-muted-light dark:text-text-muted-dark">{t('landing.orSelect')}</p>
                                     </>
                                 )}
                             </div>
@@ -79,17 +81,17 @@ const LandingPage: React.FC<LandingPageProps> = ({
                                 onClick={() => fileInputRef.current?.click()}
                                 className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-stone-200 dark:bg-border-dark text-sm font-bold leading-normal tracking-[0.015em] text-text-light dark:text-text-dark hover:bg-stone-300 dark:hover:bg-dashed-border-dark transition-colors"
                             >
-                                <span className="truncate">{uploadedImage ? 'Fotoğrafı Değiştir' : 'Fotoğraf Yükle'}</span>
+                                <span className="truncate">{uploadedImage ? t('landing.changePhoto') : t('landing.uploadPhoto')}</span>
                             </button>
                         </div>
                     </div>
                     <div className="flex flex-col space-y-6">
                         <div className="flex flex-col p-4 bg-white dark:bg-surface-dark border border-stone-200 dark:border-border-dark rounded-xl flex-grow">
                             <div className="flex justify-between items-center px-4 pt-5 pb-3">
-                                <h2 className="text-text-light dark:text-text-dark text-[22px] font-bold leading-tight tracking-[-0.015em]">Gideceğin Yılları Seç</h2>
+                                <h2 className="text-text-light dark:text-text-dark text-[22px] font-bold leading-tight tracking-[-0.015em]">{t('landing.selectYears')}</h2>
                                 <div className="flex gap-3">
-                                    <button onClick={onSelectAll} className="text-sm font-medium text-primary hover:underline py-2">Tümünü Seç</button>
-                                    <button onClick={onClearAll} className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark hover:underline py-2">Temizle</button>
+                                    <button onClick={onSelectAll} className="text-sm font-medium text-primary hover:underline py-2">{t('landing.selectAll')}</button>
+                                    <button onClick={onClearAll} className="text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark hover:underline py-2">{t('landing.clear')}</button>
                                 </div>
                             </div>
                             <div className="px-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1">
@@ -111,7 +113,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
                             disabled={!uploadedImage || selectedDecades.length === 0}
                             className={`flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-6 bg-primary text-background-dark text-base font-bold leading-normal tracking-[0.015em] hover:bg-yellow-500 transition-colors ${(!uploadedImage || selectedDecades.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                            <span className="truncate">Zaman Yolculuğunu Başlat</span>
+                            <span className="truncate">{t('landing.startJourney')}</span>
                         </button>
                     </div>
                 </div>

@@ -18,6 +18,7 @@ import Footer from './components/Footer';
 import Header from './components/Header';
 import LandingPage, { ALL_DECADES } from './components/LandingPage';
 import IntroPage from './components/IntroPage';
+import { useT } from './lib/useT';
 
 type ImageStatus = 'pending' | 'done' | 'error';
 interface GeneratedImage {
@@ -45,6 +46,7 @@ const useMediaQuery = (query: string) => {
 };
 
 function App() {
+    const { t } = useT();
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImage>>({});
     const [selectedDecades, setSelectedDecades] = useState<string[]>([]);
@@ -95,7 +97,7 @@ function App() {
 
         // Check if user has enough credits
         if (!isPremium && credits < selectedDecades.length) {
-            alert(`Yetersiz kredi! ${selectedDecades.length} görsel oluşturmak için ${selectedDecades.length} krediye ihtiyacınız var. Mevcut krediniz: ${credits}`);
+            alert(t('error.insufficientCredits', { count: selectedDecades.length, credits }));
             setShowPricingModal(true);
             return;
         }
@@ -131,7 +133,7 @@ function App() {
                     [decade]: { status: 'done', url: timestampedUrl },
                 }));
             } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
+                const errorMessage = err instanceof Error ? err.message : t('error.unknown');
                 setGeneratedImages(prev => ({
                     ...prev,
                     [decade]: { status: 'error', error: errorMessage },
@@ -188,7 +190,7 @@ function App() {
                 [decade]: { status: 'done', url: timestampedUrl },
             }));
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
+            const errorMessage = err instanceof Error ? err.message : t('error.unknown');
             setGeneratedImages(prev => ({
                 ...prev,
                 [decade]: { status: 'error', error: errorMessage },
@@ -224,7 +226,7 @@ function App() {
             const successfulImages = entries.filter(([, image]) => image.status === 'done' && image.url);
 
             if (successfulImages.length === 0) {
-                alert("İndirilecek oluşturulmuş resim yok.");
+                alert(t('results.noImages'));
                 return;
             }
 
@@ -248,7 +250,7 @@ function App() {
             }
         } catch (error) {
             console.error("Failed to download images:", error);
-            alert("Resimleri indirirken bir hata oluştu. Lütfen tekrar deneyin.");
+            alert(t('results.downloadError'));
         } finally {
             setIsDownloading(false);
         }
@@ -270,25 +272,25 @@ function App() {
                 }, {} as Record<string, string>);
 
             if (Object.keys(imageData).length === 0) {
-                alert("İndirilecek oluşturulmuş resim yok.");
+                alert(t('results.noImages'));
                 return;
             }
 
             // Ask the user if they want to add the credit
-            const addCredit = window.confirm("Albüm resimlerinin alt köşesine 'Hikmet Tanrıverdi tarafından oluşturuldu' yazısı eklensin mi?");
+            const addCredit = window.confirm(t('results.creditQuestion'));
 
             const albumDataUrl = await createAlbumPage(imageData, addCredit);
 
             const link = document.createElement('a');
             link.href = albumDataUrl;
-            link.download = 'past-forward-albumu.jpg';
+            link.download = t('album.filename');
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
         } catch (error) {
             console.error("Failed to create or download album:", error);
-            alert("Üzgünüz, albümünüz oluşturulurken bir hata meydana geldi. Lütfen tekrar deneyin.");
+            alert(t('results.albumError'));
         } finally {
             setIsDownloading(false);
         }
@@ -341,7 +343,7 @@ function App() {
                                                     {user.user_metadata?.full_name || user.email?.split('@')[0]}
                                                 </span>
                                                 <button onClick={() => logOut()} className="text-xs text-stone-500 hover:text-red-500 text-left transition-colors">
-                                                    Çıkış Yap
+                                                    {t('user.signOut')}
                                                 </button>
                                             </div>
                                         </div>
@@ -351,7 +353,7 @@ function App() {
                                             className="flex items-center gap-2 bg-white dark:bg-stone-800 text-stone-800 dark:text-white px-5 py-2 rounded-full font-semibold border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 transition-all shadow-sm w-full sm:w-auto justify-center"
                                         >
                                             <span>👤</span>
-                                            <span>Giriş Yap / Üye Ol</span>
+                                            <span>{t('user.signIn.signUp')}</span>
                                         </button>
                                     )}
                                 </div>
@@ -361,12 +363,12 @@ function App() {
                                     {isPremium ? (
                                         <div className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full font-bold text-sm sm:text-base">
                                             <span>👑</span>
-                                            <span>Premium</span>
+                                            <span>{t('pricing.premium.name')}</span>
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-2 bg-yellow-400 text-black px-4 py-2 rounded-full font-bold text-sm sm:text-base">
                                             <span>⚡</span>
-                                            <span>{credits} Kredi</span>
+                                            <span>{credits} {t('user.credits')}</span>
                                         </div>
                                     )}
 
@@ -375,7 +377,7 @@ function App() {
                                             onClick={() => setShowPricingModal(true)}
                                             className="bg-stone-900 dark:bg-white text-white dark:text-black px-5 py-2 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg text-sm sm:text-base"
                                         >
-                                            Yükselt
+                                            {t('user.upgrade')}
                                         </button>
                                     )}
                                 </div>
@@ -446,17 +448,17 @@ function App() {
                                                     disabled={isDownloading}
                                                     className={`${primaryButtonClasses} disabled:opacity-50 disabled:cursor-not-allowed py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
                                                 >
-                                                    {isDownloading ? 'Albüm Hazırlanıyor...' : 'Albümü İndir'}
+                                                    {isDownloading ? t('results.preparing') : t('results.album')}
                                                 </button>
                                                 <button
                                                     onClick={handleDownloadAllImages}
                                                     disabled={isDownloading}
                                                     className={`${primaryButtonClasses} disabled:opacity-50 disabled:cursor-not-allowed py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
                                                 >
-                                                    {isDownloading ? 'İndiriliyor...' : 'Tümünü İndir'}
+                                                    {isDownloading ? t('results.downloading') : t('results.all')}
                                                 </button>
                                                 <button onClick={handleReset} className={`${secondaryButtonClasses} !text-text-light dark:!text-text-dark !border-stone-300 dark:!border-border-dark !bg-white/50 dark:!bg-surface-dark/50 hover:!bg-stone-100 dark:hover:!bg-surface-dark py-3 px-6 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}>
-                                                    Başa Dön
+                                                    {t('results.back')}
                                                 </button>
                                             </div>
                                         )}

@@ -4,6 +4,7 @@
  */
 import React, { useState } from 'react';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/supabaseService';
+import { useT } from '../lib/useT';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+    const { t } = useT();
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -25,12 +27,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         setError('');
 
         if (isSignUp && password !== confirmPassword) {
-            setError('Şifreler eşleşmiyor.');
+            setError(t('auth.error.match'));
             return;
         }
 
         if (password.length < 6) {
-            setError('Şifre en az 6 karakter olmalı.');
+            setError(t('auth.error.length'));
             return;
         }
 
@@ -92,7 +94,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <button
                     onClick={handleClose}
                     className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors"
-                    aria-label="Kapat"
+                    aria-label={t('auth.close')}
                 >
                     <span className="text-2xl text-stone-600 dark:text-stone-300">×</span>
                 </button>
@@ -100,10 +102,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 {/* Header */}
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 text-center">
                     <h2 className="text-3xl font-bold text-white mb-1">
-                        {isSignUp ? 'Üye Ol' : 'Giriş Yap'}
+                        {isSignUp ? t('auth.signUp') : t('auth.signIn')}
                     </h2>
                     <p className="text-white/90 text-sm">
-                        {isSignUp ? 'Zaman yolculuğuna başla' : 'Hesabına giriş yap'}
+                        {isSignUp ? t('auth.signUp.subtitle') : t('auth.signIn.subtitle')}
                     </p>
                 </div>
 
@@ -128,7 +130,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
-                        Google ile {isSignUp ? 'Üye Ol' : 'Giriş Yap'}
+                        {t('auth.google.button', { action: isSignUp ? t('auth.signUp') : t('auth.signIn') })}
                     </button>
 
                     {/* Divider */}
@@ -138,7 +140,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         </div>
                         <div className="relative flex justify-center text-sm">
                             <span className="px-2 bg-white dark:bg-surface-dark text-stone-500 dark:text-stone-400">
-                                veya
+                                {t('auth.or')}
                             </span>
                         </div>
                     </div>
@@ -147,7 +149,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <form onSubmit={handleEmailAuth} className="space-y-4">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
-                                E-posta
+                                {t('auth.email')}
                             </label>
                             <input
                                 id="email"
@@ -156,13 +158,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 className="w-full px-4 py-3 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white dark:bg-stone-800 text-stone-900 dark:text-white"
-                                placeholder="ornek@email.com"
+                                placeholder={t('auth.email.placeholder')}
                             />
                         </div>
 
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
-                                Şifre
+                                {t('auth.password')}
                             </label>
                             <input
                                 id="password"
@@ -171,14 +173,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 className="w-full px-4 py-3 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white dark:bg-stone-800 text-stone-900 dark:text-white"
-                                placeholder="••••••••"
+                                placeholder={t('auth.password.placeholder')}
                             />
                         </div>
 
                         {isSignUp && (
                             <div>
                                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">
-                                    Şifre Tekrar
+                                    {t('auth.confirmPassword')}
                                 </label>
                                 <input
                                     id="confirmPassword"
@@ -187,7 +189,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     required
                                     className="w-full px-4 py-3 border border-stone-300 dark:border-stone-600 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white dark:bg-stone-800 text-stone-900 dark:text-white"
-                                    placeholder="••••••••"
+                                    placeholder={t('auth.password.placeholder')}
                                 />
                             </div>
                         )}
@@ -197,14 +199,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                             disabled={loading}
                             className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-yellow-500 hover:to-orange-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? 'Yükleniyor...' : (isSignUp ? 'Üye Ol' : 'Giriş Yap')}
+                            {loading ? t('auth.loading') : (isSignUp ? t('auth.signUp') : t('auth.signIn'))}
                         </button>
                     </form>
 
                     {/* Toggle Sign Up/Sign In */}
                     <div className="text-center pt-4 border-t border-stone-200 dark:border-stone-700">
                         <p className="text-sm text-stone-600 dark:text-stone-400">
-                            {isSignUp ? 'Zaten hesabın var mı?' : 'Hesabın yok mu?'}
+                            {isSignUp ? t('auth.hasAccount') : t('auth.noAccount')}
                             {' '}
                             <button
                                 onClick={() => {
@@ -213,7 +215,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                 }}
                                 className="text-yellow-600 dark:text-yellow-400 font-semibold hover:underline"
                             >
-                                {isSignUp ? 'Giriş Yap' : 'Üye Ol'}
+                                {isSignUp ? t('auth.signIn') : t('auth.signUp')}
                             </button>
                         </p>
                     </div>
