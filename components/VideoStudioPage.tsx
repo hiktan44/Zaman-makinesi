@@ -4,7 +4,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { playCameraShutter, playSuccess, playTick, playWarp } from '../lib/sfxUtils';
-import { generateKieOmniVideo } from '../services/kieOmniService';
+import { generateFalAiVideo } from '../services/falAiService';
 import { getCustomApiKeys, saveCustomApiKeys } from '../services/geminiService';
 
 interface VideoStudioPageProps {
@@ -124,12 +124,14 @@ export default function VideoStudioPage({
     const [progress, setProgress] = useState(0);
     const [activeEraIndex, setActiveEraIndex] = useState(0);
 
-    // Kie.ai Google Omni states
-    const [kieLoading, setKieLoading] = useState(false);
+    // Fal.ai Omni Latest states
+    const [falLoading, setFalLoading] = useState(false);
+    const [falPollingMsg, setFalPollingMsg] = useState<string | null>(null);
+    const [selectedFalModel, setSelectedFalModel] = useState<string>('fal-ai/veo-2');
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
     const [omniPrompt, setOmniPrompt] = useState('Tek fotoğraftaki insan canlansın; nefes alsın, rüzgarda kıyafetleri dalgalansın ve altın ışık dalgasıyla 1920 Gatsby, 1550 Osmanlı, 1885 Vahşi Batı ve 2077 Siber kıyafetlerine animasyonla dönüşsün.');
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-    const [kieKeyInput, setKieKeyInput] = useState('');
+    const [falKeyInput, setFalKeyInput] = useState('');
     const [statusToast, setStatusToast] = useState<string | null>(null);
 
     const animFrameRef = useRef<number | null>(null);
@@ -139,8 +141,8 @@ export default function VideoStudioPage({
         if (originalImage) {
             setUserImage(originalImage);
         }
-        const { kieKey } = getCustomApiKeys();
-        if (kieKey) setKieKeyInput(kieKey);
+        const { falKey } = getCustomApiKeys();
+        if (falKey) setFalKeyInput(falKey);
     }, [originalImage]);
 
     // Load single source image
@@ -152,7 +154,6 @@ export default function VideoStudioPage({
             }
         });
 
-        // Initialize sparkles
         const parts: Array<{ x: number; y: number; vx: number; vy: number; size: number; alpha: number; color: string }> = [];
         for (let i = 0; i < 70; i++) {
             parts.push({
@@ -490,7 +491,7 @@ export default function VideoStudioPage({
         };
     }, [loadedImage, isPlaying, speed, isRecording, generatedVideoUrl]);
 
-    // High-Definition Video Export
+    // High-Definition 60 FPS Video Export
     const handleRecordAndDownload = async () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -576,51 +577,55 @@ export default function VideoStudioPage({
         }
     };
 
-    // Kie.ai Google Omni Video Generation
-    const handleGenerateKieOmni = async () => {
-        const { kieKey } = getCustomApiKeys();
-        if (!kieKey) {
+    // Fal.ai Omni Latest Video Generation
+    const handleGenerateFalAi = async () => {
+        const { falKey } = getCustomApiKeys();
+        if (!falKey) {
             setShowApiKeyModal(true);
             return;
         }
 
         playWarp();
-        setKieLoading(true);
-        setStatusToast('Kie.ai Google Omni motoruna bağlanılıyor...');
+        setFalLoading(true);
+        setFalPollingMsg('Fal.ai kuyruğuna bağlandı...');
+        setStatusToast('Fal.ai Omni Latest video üretimi başladı...');
 
         try {
-            const response = await generateKieOmniVideo({
+            const response = await generateFalAiVideo({
                 image: userImage,
                 prompt: omniPrompt,
+                model: selectedFalModel,
                 aspectRatio: '9:16',
-                durationSeconds: 6
+                duration: '5'
             });
 
             if (response.status === 'COMPLETED' && response.videoUrl) {
                 setGeneratedVideoUrl(response.videoUrl);
                 playSuccess();
-                setStatusToast('Google Omni Videosu Hazır!');
+                setStatusToast('Fal.ai Omni Videosu Başarıyla Hazırlandı!');
             } else {
-                // If remote job is queued or simulated, run fluid 60 FPS video export
+                // If job is queued or pending, run live 60fps video download
                 playSuccess();
                 setStatusToast('60 FPS Canlı Video Hazırlanıyor...');
                 handleRecordAndDownload();
             }
-        } catch (err) {
-            console.error('Kie Omni generation error:', err);
+        } catch (err: any) {
+            console.error('Fal.ai generation error:', err);
+            setStatusToast(err.message || 'Fal.ai hatası, canlı motor çalıştırılıyor...');
             handleRecordAndDownload();
         } finally {
-            setKieLoading(false);
+            setFalLoading(false);
+            setFalPollingMsg(null);
             setTimeout(() => setStatusToast(null), 4000);
         }
     };
 
-    const handleSaveKieKey = () => {
-        if (!kieKeyInput.trim()) return;
-        saveCustomApiKeys('', kieKeyInput.trim());
+    const handleSaveFalKey = () => {
+        if (!falKeyInput.trim()) return;
+        saveCustomApiKeys(undefined, undefined, falKeyInput.trim());
         setShowApiKeyModal(false);
         playSuccess();
-        handleGenerateKieOmni();
+        handleGenerateFalAi();
     };
 
     return (
@@ -636,20 +641,20 @@ export default function VideoStudioPage({
             {/* Top Studio Header */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-cyan-500/20 border border-amber-500/40 flex items-center justify-center text-2xl">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 via-orange-500/20 to-cyan-500/20 border border-amber-500/40 flex items-center justify-center text-2xl">
                         🎬
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                KIE.AI GOOGLE OMNI — CANLI VİDEO STÜDYOSU
+                                FAL.AI OMNI LATEST — CANLI VİDEO & KIYAFET DÖNÜŞÜMÜ
                             </h2>
-                            <span className="bg-gradient-to-r from-amber-400 to-cyan-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                                GOOGLE OMNI (60 FPS)
+                            <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-cyan-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                FAL.AI OMNI
                             </span>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Kie.ai Google Omni motoru ile tek fotoğraftaki insan canlanır, rüzgarda kıyafetleri dalgalanır ve animasyonla çağlar arası kıyafet değiştirir.
+                            Fal.ai Omni Latest / Veo 2 motoru ile tek fotoğraftaki insan canlanır, rüzgarda kıyafetleri dalgalanır ve animasyonla çağlar arası kıyafet değiştirir.
                         </p>
                     </div>
                 </div>
@@ -702,7 +707,7 @@ export default function VideoStudioPage({
                         {/* Minimal top status */}
                         <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-white text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg pointer-events-none">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>{isRecording ? `KAYDEDİLİYOR %${recordProgress}` : 'GOOGLE OMNI 60 FPS'}</span>
+                            <span>{falLoading ? (falPollingMsg || 'FAL.AI HESAPLANIYOR') : isRecording ? `KAYDEDİLİYOR %${recordProgress}` : 'FAL.AI OMNI 60 FPS'}</span>
                         </div>
 
                         {/* Bottom Floating Controls (When canvas is active) */}
@@ -740,12 +745,12 @@ export default function VideoStudioPage({
                     {/* Big Action Buttons */}
                     <div className="w-full max-w-[340px] flex flex-col gap-2.5 mt-4">
                         <button
-                            disabled={kieLoading || isRecording}
-                            onClick={handleGenerateKieOmni}
-                            className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 hover:brightness-110 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            disabled={falLoading || isRecording}
+                            onClick={handleGenerateFalAi}
+                            className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-500 hover:brightness-110 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                            <span>{kieLoading ? '⏳' : '🚀'}</span>
-                            <span>{kieLoading ? 'Kie.ai Google Omni İşliyor...' : 'Kie.ai Google Omni ile Video Üret'}</span>
+                            <span>{falLoading ? '⏳' : '🚀'}</span>
+                            <span>{falLoading ? 'Fal.ai Omni Hesaplanıyor...' : 'Fal.ai Omni Latest ile Video Üret'}</span>
                         </button>
 
                         <button
@@ -759,23 +764,48 @@ export default function VideoStudioPage({
                     </div>
                 </div>
 
-                {/* RIGHT: Kie.ai Google Omni Settings & Motion Prompts */}
+                {/* RIGHT: Fal.ai Model Settings & Motion Prompts */}
                 <div className="lg:col-span-7 flex flex-col space-y-6">
                     
-                    {/* Omni Engine Settings Card */}
+                    {/* Fal.ai Engine Settings Card */}
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-base font-black text-white flex items-center gap-2">
-                                <span>🤖</span> Kie.ai Google Omni Model Ayarları
+                                <span>🤖</span> Fal.ai Model & Motor Ayarları
                             </h3>
-                            <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                                GOOGLE/OMNI
-                            </span>
+                            <button
+                                onClick={() => setShowApiKeyModal(true)}
+                                className="text-xs font-bold text-amber-400 hover:underline cursor-pointer"
+                            >
+                                🔑 Fal.ai Key Ayarla
+                            </button>
+                        </div>
+
+                        {/* Model Selector */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            {[
+                                { id: 'fal-ai/veo-2', name: 'Fal.ai Omni / Veo 2', badge: 'Önerilen' },
+                                { id: 'fal-ai/kling-video/v1.5/pro/image-to-video', name: 'Kling 1.5 Pro', badge: 'HD Motion' },
+                                { id: 'fal-ai/minimax/video-01/image-to-video', name: 'Minimax Video-01', badge: 'Fast' }
+                            ].map((m) => (
+                                <div
+                                    key={m.id}
+                                    onClick={() => { playTick(); setSelectedFalModel(m.id); }}
+                                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                                        selectedFalModel === m.id
+                                            ? 'bg-amber-500/15 border-amber-400 text-amber-300'
+                                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                                    }`}
+                                >
+                                    <div className="text-xs font-bold">{m.name}</div>
+                                    <span className="text-[9px] font-mono text-slate-500 mt-1">{m.badge}</span>
+                                </div>
+                            ))}
                         </div>
 
                         <div>
                             <label className="block text-xs font-bold text-slate-300 mb-1">
-                                Google Omni Canlı Hareket & Kıyafet Talimatı (Prompt):
+                                Fal.ai Hareket & Kıyafet Dönüşüm Talimatı (Prompt):
                             </label>
                             <textarea
                                 rows={3}
@@ -853,13 +883,13 @@ export default function VideoStudioPage({
                 </div>
             </div>
 
-            {/* Quick Kie.ai API Key Modal */}
+            {/* Quick Fal.ai API Key Modal */}
             {showApiKeyModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
                     <div className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-4 text-white shadow-2xl">
                         <div className="flex items-center justify-between">
                             <h3 className="font-black text-base flex items-center gap-2">
-                                <span>🔑</span> Kie.ai API Anahtarınızı Girin
+                                <span>🔑</span> Fal.ai API Anahtarınızı (FAL_KEY) Girin
                             </h3>
                             <button
                                 onClick={() => setShowApiKeyModal(false)}
@@ -869,21 +899,21 @@ export default function VideoStudioPage({
                             </button>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Google Omni motorunu çalıştırmak için lütfen Kie.ai API anahtarınızı girin:
+                            Fal.ai Omni / Veo 2 video motorunu çalıştırmak için lütfen Fal.ai anahtarınızı girin:
                         </p>
                         <input
                             type="password"
-                            placeholder="kie_xxxxxxxxxxxxxxxxxxxx"
-                            value={kieKeyInput}
-                            onChange={(e) => setKieKeyInput(e.target.value)}
+                            placeholder="Key xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                            value={falKeyInput}
+                            onChange={(e) => setFalKeyInput(e.target.value)}
                             className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-amber-300 focus:outline-none focus:border-amber-400"
                         />
                         <div className="flex gap-3 pt-2">
                             <button
-                                onClick={handleSaveKieKey}
+                                onClick={handleSaveFalKey}
                                 className="flex-1 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer"
                             >
-                                Kaydet & Devam Et
+                                Kaydet & Video Üret
                             </button>
                         </div>
                     </div>

@@ -5,15 +5,17 @@
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 import { ERAS } from "../constants/eraConstants";
 
-export function getCustomApiKeys(): { geminiKey: string; kieKey: string } {
+export function getCustomApiKeys(): { geminiKey: string; kieKey: string; falKey: string } {
     const geminiKey = localStorage.getItem('zm_custom_gemini_key') || import.meta.env.VITE_API_KEY?.trim() || "";
     const kieKey = localStorage.getItem('zm_custom_kie_key') || import.meta.env.VITE_KIE_API_KEY?.trim() || "";
-    return { geminiKey, kieKey };
+    const falKey = localStorage.getItem('zm_custom_fal_key') || import.meta.env.VITE_FAL_KEY?.trim() || "";
+    return { geminiKey, kieKey, falKey };
 }
 
-export function saveCustomApiKeys(geminiKey: string, kieKey: string) {
-    if (geminiKey) localStorage.setItem('zm_custom_gemini_key', geminiKey.trim());
-    if (kieKey) localStorage.setItem('zm_custom_kie_key', kieKey.trim());
+export function saveCustomApiKeys(geminiKey?: string, kieKey?: string, falKey?: string) {
+    if (geminiKey !== undefined) localStorage.setItem('zm_custom_gemini_key', geminiKey.trim());
+    if (kieKey !== undefined) localStorage.setItem('zm_custom_kie_key', kieKey.trim());
+    if (falKey !== undefined) localStorage.setItem('zm_custom_fal_key', falKey.trim());
 }
 
 /**
@@ -54,10 +56,8 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 
 /**
  * Photorealistic AI Image Generation with Flux/SDXL
- * Generates genuine historical period costumes, hairstyles, accessories, and environments.
  */
 async function generateWithFluxAI(prompt: string, eraId: string): Promise<string> {
-    // Curate prompt for maximum historical accuracy & photorealism
     const enhancedPrompt = `masterpiece portrait, authentic historical period costume, ${prompt}, ultra-realistic human face, detailed skin texture, period lighting and background, 8k resolution, cinematic photorealism`;
     const encoded = encodeURIComponent(enhancedPrompt);
     const seed = Math.floor(Math.random() * 900000) + 100000;
