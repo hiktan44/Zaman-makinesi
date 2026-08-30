@@ -126,10 +126,11 @@ export default function VideoStudioPage({
 
     // Fal.ai Omni Latest states
     const [falLoading, setFalLoading] = useState(false);
-    const [falPollingMsg, setFalPollingMsg] = useState<string | null>(null);
+    const [falStatusMsg, setFalStatusMsg] = useState<string | null>(null);
+    const [falErrorMsg, setFalErrorMsg] = useState<string | null>(null);
     const [selectedFalModel, setSelectedFalModel] = useState<string>('fal-ai/veo-2');
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
-    const [omniPrompt, setOmniPrompt] = useState('Tek fotoğraftaki insan canlansın; nefes alsın, rüzgarda kıyafetleri dalgalansın ve altın ışık dalgasıyla 1920 Gatsby, 1550 Osmanlı, 1885 Vahşi Batı ve 2077 Siber kıyafetlerine animasyonla dönüşsün.');
+    const [customPromptNote, setCustomPromptNote] = useState('Kıyafetler rüzgarda canlı dalgalansın, altın enerji dalgasıyla çağlar arası kesintisiz ve akıcı dönüşsün.');
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     const [falKeyInput, setFalKeyInput] = useState('');
     const [statusToast, setStatusToast] = useState<string | null>(null);
@@ -179,6 +180,7 @@ export default function VideoStudioPage({
                 playTick();
                 setUserImage(reader.result as string);
                 setGeneratedVideoUrl(null);
+                setFalErrorMsg(null);
             };
             reader.readAsDataURL(file);
         }
@@ -587,35 +589,33 @@ export default function VideoStudioPage({
 
         playWarp();
         setFalLoading(true);
-        setFalPollingMsg('Fal.ai kuyruğuna bağlandı...');
-        setStatusToast('Fal.ai Omni Latest video üretimi başladı...');
+        setFalErrorMsg(null);
+        setFalStatusMsg('[1/3] Fal.ai sunucusuna bağlanılıyor...');
 
         try {
             const response = await generateFalAiVideo({
                 image: userImage,
-                prompt: omniPrompt,
+                prompt: customPromptNote,
                 model: selectedFalModel,
                 aspectRatio: '9:16',
-                duration: '5'
+                duration: '5',
+                onProgress: (msg) => setFalStatusMsg(msg)
             });
 
             if (response.status === 'COMPLETED' && response.videoUrl) {
                 setGeneratedVideoUrl(response.videoUrl);
                 playSuccess();
-                setStatusToast('Fal.ai Omni Videosu Başarıyla Hazırlandı!');
+                setStatusToast('Fal.ai Videosu Başarıyla Oluşturuldu!');
+            } else if (response.status === 'FAILED') {
+                throw new Error(response.message || 'Fal.ai işlemi başarısız oldu.');
             } else {
-                // If job is queued or pending, run live 60fps video download
-                playSuccess();
-                setStatusToast('60 FPS Canlı Video Hazırlanıyor...');
-                handleRecordAndDownload();
+                setStatusToast('Video arka planda işleniyor...');
             }
         } catch (err: any) {
             console.error('Fal.ai generation error:', err);
-            setStatusToast(err.message || 'Fal.ai hatası, canlı motor çalıştırılıyor...');
-            handleRecordAndDownload();
+            setFalErrorMsg(err.message || 'Fal.ai video üretimi sırasında bir hata oluştu.');
         } finally {
             setFalLoading(false);
-            setFalPollingMsg(null);
             setTimeout(() => setStatusToast(null), 4000);
         }
     };
@@ -678,6 +678,22 @@ export default function VideoStudioPage({
                 </div>
             </div>
 
+            {/* Error Banner */}
+            {falErrorMsg && (
+                <div className="p-4 rounded-2xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg">⚠️</span>
+                        <span>{falErrorMsg}</span>
+                    </div>
+                    <button
+                        onClick={() => setShowApiKeyModal(true)}
+                        className="px-3 py-1 rounded-xl bg-red-500/30 hover:bg-red-500/50 text-white font-bold text-[11px] whitespace-nowrap cursor-pointer"
+                    >
+                        🔑 Anahtarı Kontrol Et
+                    </button>
+                </div>
+            )}
+
             {/* Studio Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
@@ -707,7 +723,7 @@ export default function VideoStudioPage({
                         {/* Minimal top status */}
                         <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-white text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg pointer-events-none">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>{falLoading ? (falPollingMsg || 'FAL.AI HESAPLANIYOR') : isRecording ? `KAYDEDİLİYOR %${recordProgress}` : 'FAL.AI OMNI 60 FPS'}</span>
+                            <span>{falLoading ? 'FAL.AI İŞLENİYOR' : isRecording ? `KAYDEDİLİYOR %${recordProgress}` : 'FAL.AI OMNI 60 FPS'}</span>
                         </div>
 
                         {/* Bottom Floating Controls (When canvas is active) */}
@@ -742,6 +758,14 @@ export default function VideoStudioPage({
                         )}
                     </div>
 
+                    {/* Progress Bar under Video when loading */}
+                    {falLoading && falStatusMsg && (
+                        <div className="w-full max-w-[340px] mt-3 p-3 rounded-2xl bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-mono flex items-center gap-2 animate-pulse">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+                            <span>{falStatusMsg}</span>
+                        </div>
+                    )}
+
                     {/* Big Action Buttons */}
                     <div className="w-full max-w-[340px] flex flex-col gap-2.5 mt-4">
                         <button
@@ -753,14 +777,27 @@ export default function VideoStudioPage({
                             <span>{falLoading ? 'Fal.ai Omni Hesaplanıyor...' : 'Fal.ai Omni Latest ile Video Üret'}</span>
                         </button>
 
-                        <button
-                            disabled={isRecording}
-                            onClick={handleRecordAndDownload}
-                            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs shadow-xl active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                        >
-                            <span>{isRecording ? '⏳' : '📥'}</span>
-                            <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : 'Canlı Kıyafet Videosunu İndir (60 FPS)'}</span>
-                        </button>
+                        {generatedVideoUrl ? (
+                            <a
+                                href={generatedVideoUrl}
+                                download="zaman-makinesi-fal-omni.mp4"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 text-white font-black text-xs shadow-xl active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer text-center"
+                            >
+                                <span>📥</span>
+                                <span>Oluşturulan AI Videoyu İndir (MP4)</span>
+                            </a>
+                        ) : (
+                            <button
+                                disabled={isRecording}
+                                onClick={handleRecordAndDownload}
+                                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs shadow-xl active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            >
+                                <span>{isRecording ? '⏳' : '📥'}</span>
+                                <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : 'Canlı Kıyafet Videosunu İndir (60 FPS)'}</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -775,9 +812,10 @@ export default function VideoStudioPage({
                             </h3>
                             <button
                                 onClick={() => setShowApiKeyModal(true)}
-                                className="text-xs font-bold text-amber-400 hover:underline cursor-pointer"
+                                className="text-xs font-bold text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
                             >
-                                🔑 Fal.ai Key Ayarla
+                                <span>🔑</span>
+                                <span>Fal.ai Key Ayarla</span>
                             </button>
                         </div>
 
@@ -793,7 +831,7 @@ export default function VideoStudioPage({
                                     onClick={() => { playTick(); setSelectedFalModel(m.id); }}
                                     className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
                                         selectedFalModel === m.id
-                                            ? 'bg-amber-500/15 border-amber-400 text-amber-300'
+                                            ? 'bg-amber-500/15 border-amber-400 text-amber-300 shadow-md'
                                             : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
                                     }`}
                                 >
@@ -809,25 +847,27 @@ export default function VideoStudioPage({
                             </label>
                             <textarea
                                 rows={3}
-                                value={omniPrompt}
-                                onChange={(e) => setOmniPrompt(e.target.value)}
+                                value={customPromptNote}
+                                onChange={(e) => setCustomPromptNote(e.target.value)}
                                 className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-sans"
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-cyan-400">🌊 Tek Fotoğraftan Canlı</div>
-                                <p className="text-[11px] text-slate-400">Kişinin yüzü korunur, nefes alma ve saç dalgalanması eklenir.</p>
-                            </div>
-                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-amber-400">⚡ Animasyonlu Kıyafet Değişimi</div>
-                                <p className="text-[11px] text-slate-400">Gatsby, Osmanlı, Vahşi Batı ve Siber kıyafetler dalgayla dönüşür.</p>
-                            </div>
-                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-emerald-400">📱 Bantsız Temiz 9:16</div>
-                                <p className="text-[11px] text-slate-400">Yüzü kapatan şeritler kaldırıldı; tam ekran temiz video.</p>
-                            </div>
+                        {/* Prompt Presets */}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                            {[
+                                '⚡ Hızlı ve Akıcı Kıyafet Dönüşümü',
+                                '🌊 Güçlü Rüzgar ve Kumaş Dalgalanması',
+                                '✨ Altın Enerji Parçacıkları ve Işık Dalgası'
+                            ].map((preset) => (
+                                <button
+                                    key={preset}
+                                    onClick={() => { playTick(); setCustomPromptNote(preset); }}
+                                    className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400 hover:text-amber-300 hover:border-amber-400/50 transition cursor-pointer"
+                                >
+                                    {preset}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
