@@ -13,18 +13,23 @@ import { playTick } from '../lib/sfxUtils';
 interface HeaderProps {
     onOpenPricing?: () => void;
     onOpenAuth?: () => void;
+    onToggleView?: () => void;
+    viewMode?: 'intro' | 'app';
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenPricing, onOpenAuth }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenPricing, onOpenAuth, onToggleView, viewMode }) => {
     const { theme, toggleTheme } = useTheme();
     const { credits } = usePayment();
     const { user, isAuthenticated, signOut } = useAuth();
     const { t } = useT();
 
     return (
-        <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-800 bg-slate-950/80 backdrop-blur-md px-4 sm:px-6 md:px-10 py-3 sticky top-0 z-40">
+        <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-800 bg-slate-950/90 backdrop-blur-md px-4 sm:px-6 md:px-10 py-3 sticky top-0 z-40">
             {/* Logo */}
-            <div className="flex items-center gap-3 text-white">
+            <div
+                onClick={() => onToggleView && onToggleView()}
+                className="flex items-center gap-3 text-white cursor-pointer select-none"
+            >
                 <div className="size-7 text-amber-400">
                     <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z"></path>
@@ -42,6 +47,16 @@ const Header: React.FC<HeaderProps> = ({ onOpenPricing, onOpenAuth }) => {
 
             {/* Navigation & Actions */}
             <nav className="flex items-center gap-3 md:gap-5">
+                {/* Intro / App Toggle */}
+                {onToggleView && (
+                    <button
+                        onClick={() => { playTick(); onToggleView(); }}
+                        className="hidden sm:inline text-xs font-bold text-slate-400 hover:text-amber-300 transition px-2 py-1"
+                    >
+                        {viewMode === 'intro' ? '🚀 Kokpite Git' : '📖 Tanıtım'}
+                    </button>
+                )}
+
                 {/* Credit Fuel Meter */}
                 {onOpenPricing && (
                     <button

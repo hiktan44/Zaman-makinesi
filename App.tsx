@@ -61,7 +61,7 @@ function App() {
     const isMobile = useMediaQuery('(max-width: 768px)');
 
     // Navigation & Modals
-    const [view, setView] = useState<'intro' | 'app'>('intro');
+    const [view, setView] = useState<'intro' | 'app'>('app');
     const [showPricingModal, setShowPricingModal] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showVideoMorphModal, setShowVideoMorphModal] = useState(false);
@@ -275,7 +275,13 @@ function App() {
         .map(id => ({ eraId: id, url: generatedImages[id]!.url! }));
 
     if (view === 'intro') {
-        return <IntroPage onStart={() => { playTick(); setView('app'); }} />;
+        return (
+            <IntroPage
+                onStart={() => { playTick(); setView('app'); }}
+                onOpenPricing={() => setShowPricingModal(true)}
+                onOpenAuth={() => setShowAuthModal(true)}
+            />
+        );
     }
 
     return (
@@ -284,6 +290,8 @@ function App() {
             <Header
                 onOpenPricing={() => setShowPricingModal(true)}
                 onOpenAuth={() => setShowAuthModal(true)}
+                onToggleView={() => setView('intro')}
+                viewMode="app"
             />
 
             <main className="flex-grow">
