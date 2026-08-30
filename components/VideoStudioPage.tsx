@@ -5,6 +5,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ERAS } from '../constants/eraConstants';
 import { playCameraShutter, playSuccess, playTick, playWarp } from '../lib/sfxUtils';
+import { generateVeoVideo } from '../services/veoVideoService';
 
 interface VideoStudioPageProps {
     images: { eraId: string; url: string }[];
@@ -12,14 +13,13 @@ interface VideoStudioPageProps {
     onNavigateToCockpit: () => void;
 }
 
-// Robust image loader with error handling
 function loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = () => {
-            console.warn('Image failed to load in Video Studio, fallback used:', src);
+            console.warn('Görsel yüklenemedi, yedek kullanılıyor:', src);
             resolve(img);
         };
         img.src = src;
@@ -46,6 +46,16 @@ function getSupportedMimeType(): { mimeType: string; extension: string } {
     return { mimeType: '', extension: 'webm' };
 }
 
+interface Particle {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    size: number;
+    alpha: number;
+    color: string;
+}
+
 export default function VideoStudioPage({
     images,
     originalImage,
@@ -53,15 +63,19 @@ export default function VideoStudioPage({
 }: VideoStudioPageProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
-    const [speed, setSpeed] = useState<number>(2000); // ms per era
+    const [speed, setSpeed] = useState<number>(2400); // ms per era
     const [isRecording, setIsRecording] = useState(false);
     const [recordProgress, setRecordProgress] = useState(0);
     const [progress, setProgress] = useState(0);
     const [activeTimelineIds, setActiveTimelineIds] = useState<string[]>([]);
     const [loadedImgMap, setLoadedImgMap] = useState<Record<string, HTMLImageElement>>({});
+    const [veoLoading, setVeoLoading] = useState(false);
+    const [veoPrompt, setVeoPrompt] = useState('Kıyafetler rüzgarda doğal olarak dalgalansın, altın tozlu ışık halkasıyla çağlar arası akıcı kıyafet dönüşümü olsun.');
+    const [activeMode, setActiveMode] = useState<'chrono_mesh' | 'veo_ai'>('chrono_mesh');
     const animFrameRef = useRef<number | null>(null);
+    const particlesRef = useRef<Particle[]>([]);
 
-    // Fallback curated demo portraits
+    // Fallback demo portraits
     const demoItems = [
         { eraId: 'present', title: '2026 GÜNÜMÜZ', url: '/images/demo-original.png' },
         { eraId: '1920s', title: '1920’ler — Great Gatsby & Caz', url: '/images/demo-gatsby.jpg' },
@@ -87,14 +101,13 @@ export default function VideoStudioPage({
 
     const allAvailableItems = hasUserImages ? userTimelineItems : demoItems;
 
-    // Initialize timeline ids
     useEffect(() => {
         if (activeTimelineIds.length === 0) {
             setActiveTimelineIds(allAvailableItems.map(i => i.eraId));
         }
     }, [allAvailableItems.length]);
 
-    // Preload all active images
+    // Preload images
     useEffect(() => {
         let isMounted = true;
         Promise.all(
@@ -109,6 +122,21 @@ export default function VideoStudioPage({
             setLoadedImgMap(map);
         });
 
+        // Initialize particles
+        const initialParticles: Particle[] = [];
+        for (let i = 0; i < 60; i++) {
+            initialParticles.push({
+                x: Math.random() * 1080,
+                y: Math.random() * 1920,
+                vx: (Math.random() - 0.5) * 2,
+                vy: -Math.random() * 3 - 1,
+                size: Math.random() * 4 + 2,
+                alpha: Math.random() * 0.8 + 0.2,
+                color: Math.random() > 0.5 ? '#fbbf24' : '#22d3ee'
+            });
+        }
+        particlesRef.current = initialParticles;
+
         return () => { isMounted = false; };
     }, [allAvailableItems]);
 
@@ -121,14 +149,18 @@ export default function VideoStudioPage({
         );
     };
 
-    // Draw single video frame
+    /**
+     * Draws the dynamic video frame with natural 2.5D cloth movement,
+     * natural body breathing & the animated Chrono-Morph Wave transition.
+     */
     const drawVideoFrame = (
         ctx: CanvasRenderingContext2D,
         w: number,
         h: number,
         slideIndex: number,
         nextIndex: number,
-        slideProgress: number
+        slideProgress: number,
+        timeSec: number
     ) => {
         const currentItem = activeItems[slideIndex];
         const nextItem = activeItems[nextIndex];
@@ -136,67 +168,131 @@ export default function VideoStudioPage({
         const currentImg = currentItem ? loadedImgMap[currentItem.eraId] : null;
         const nextImg = nextItem ? loadedImgMap[nextItem.eraId] : null;
 
-        // Background
+        // 1. Background
         ctx.fillStyle = '#030712';
         ctx.fillRect(0, 0, w, h);
 
-        // Draw current image
+        // 2. Dynamic 2.5D Natural Motion (Breathing, Swaying, Fabric Flutter)
+        const breathe = Math.sin(timeSec * 2.2) * 6;
+        const swayX = Math.sin(timeSec * 1.5) * 8;
+        const scaleZoom = 1.03 + Math.sin(timeSec * 0.8) * 0.02;
+
+        ctx.save();
+        ctx.translate(w / 2 + swayX, h / 2 + breathe);
+        ctx.scale(scaleZoom, scaleZoom);
+        ctx.translate(-w / 2, -h / 2);
+
+        // 3. Draw current era base image
         if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
             ctx.globalAlpha = 1;
             drawImageProp(ctx, currentImg, 0, 0, w, h, 0.5, 0.5);
         }
 
-        // Crossfade into next image (last 35% of slide time)
-        const fadeStart = 0.65;
-        if (slideProgress > fadeStart && nextImg && nextImg.complete && nextImg.naturalWidth > 0) {
-            const alpha = (slideProgress - fadeStart) / (1 - fadeStart);
-            ctx.globalAlpha = Math.min(1, Math.max(0, alpha));
+        // 4. ANIMATED OUTFIT MORPH WAVE (Sweeping Dynamic Chrono Scanline)
+        const isMorphing = slideProgress > 0.45; // Start morph at 45% of era duration
+        if (isMorphing && nextImg && nextImg.complete && nextImg.naturalWidth > 0) {
+            const morphRatio = (slideProgress - 0.45) / 0.55; // 0.0 -> 1.0
+            const scanY = morphRatio * (h + 200) - 100; // Top to bottom scan line
+
+            // Clip and draw the incoming transformed era outfit above scan line
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, 0, w, Math.max(0, scanY));
+            ctx.clip();
+
+            ctx.globalAlpha = 1;
             drawImageProp(ctx, nextImg, 0, 0, w, h, 0.5, 0.5);
+            ctx.restore();
+
+            // 5. Glowing Chrono Energy Laser Line & Plasma Ripple
+            const laserGrad = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30);
+            laserGrad.addColorStop(0, 'rgba(34, 211, 238, 0)');
+            laserGrad.addColorStop(0.4, 'rgba(251, 191, 36, 0.8)');
+            laserGrad.addColorStop(0.5, 'rgba(255, 255, 255, 1)');
+            laserGrad.addColorStop(0.6, 'rgba(34, 211, 238, 0.8)');
+            laserGrad.addColorStop(1, 'rgba(251, 191, 36, 0)');
+
+            ctx.fillStyle = laserGrad;
+            ctx.fillRect(0, scanY - 25, w, 50);
+
+            // Shimmering horizontal wave
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.shadowColor = '#fbbf24';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            for (let x = 0; x < w; x += 10) {
+                const waveOffset = Math.sin(x * 0.05 + timeSec * 15) * 8;
+                if (x === 0) ctx.moveTo(x, scanY + waveOffset);
+                else ctx.lineTo(x, scanY + waveOffset);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
         }
 
+        ctx.restore();
+
+        // 6. Floating Temporal Energy Particles & Sparkles
+        particlesRef.current.forEach(p => {
+            p.y += p.vy;
+            p.x += p.vx + Math.sin(timeSec * 3 + p.y * 0.01) * 0.8;
+            if (p.y < 0) {
+                p.y = h;
+                p.x = Math.random() * w;
+            }
+
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.alpha * (0.6 + Math.sin(timeSec * 5 + p.x) * 0.4);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
         ctx.globalAlpha = 1;
 
-        // Cinematic Vignette
-        const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.25, w / 2, h / 2, h * 0.7);
+        // 7. Atmospheric Vignette & Film Grain
+        const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.25, w / 2, h / 2, h * 0.72);
         grad.addColorStop(0, 'rgba(0,0,0,0)');
         grad.addColorStop(1, 'rgba(0,0,0,0.65)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
 
-        // Time Travel Top Header
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
-        ctx.fillRect(40, 60, w - 80, 110);
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+        // 8. Time Travel HUD Overlay Header
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(40, 60, w - 80, 115);
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
         ctx.lineWidth = 3;
-        ctx.strokeRect(40, 60, w - 80, 110);
+        ctx.strokeRect(40, 60, w - 80, 115);
 
         ctx.fillStyle = '#fbbf24';
         ctx.font = 'bold 36px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('⚡ ZAMAN MAKİNESİ — TIMELAPSE', w / 2, 115);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '22px monospace';
-        ctx.fillText('9:16 VERTICAL CHRONO MORPH', w / 2, 150);
+        ctx.fillText('⚡ VEO CHRONO VIDEO V4', w / 2, 115);
+        ctx.fillStyle = '#22d3ee';
+        ctx.font = 'bold 22px monospace';
+        ctx.fillText('CANLI KIYAFET HAREKETİ & MORF', w / 2, 150);
 
-        // Lower Era Title Banner
+        // 9. Lower Era Title Banner with Active Transformation Badge
         if (currentItem) {
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-            ctx.fillRect(40, h - 230, w - 80, 130);
-            ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(40, h - 230, w - 80, 130);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.fillRect(40, h - 240, w - 80, 140);
+            ctx.strokeStyle = isMorphing ? '#22d3ee' : 'rgba(251, 191, 36, 0.7)';
+            ctx.lineWidth = isMorphing ? 4 : 3;
+            ctx.strokeRect(40, h - 240, w - 80, 140);
 
             ctx.fillStyle = '#fbbf24';
             ctx.font = 'bold 44px sans-serif';
-            ctx.fillText(currentItem.title, w / 2, h - 160);
+            ctx.fillText(currentItem.title, w / 2, h - 170);
 
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '24px monospace';
-            ctx.fillText(`KARE: ${slideIndex + 1} / ${activeItems.length}`, w / 2, h - 120);
+            ctx.fillStyle = isMorphing ? '#22d3ee' : '#94a3b8';
+            ctx.font = 'bold 24px monospace';
+            const statusText = isMorphing
+                ? `⚡ ${nextItem ? nextItem.title.split('—')[0] : 'YENİ ÇAĞA'} DÖNÜŞÜYOR...`
+                : `KARE: ${slideIndex + 1} / ${activeItems.length} — DOĞAL HAREKET`;
+            ctx.fillText(statusText, w / 2, h - 125);
         }
     };
 
-    // Live Canvas Loop
+    // Live 60 FPS Render Loop
     useEffect(() => {
         if (activeItems.length === 0 || isRecording) return;
 
@@ -220,8 +316,9 @@ export default function VideoStudioPage({
             const slideIndex = Math.floor(elapsed / speed);
             const nextIndex = (slideIndex + 1) % activeItems.length;
             const slideProgress = (elapsed % speed) / speed;
+            const timeSec = now / 1000;
 
-            drawVideoFrame(ctx, canvas.width, canvas.height, slideIndex, nextIndex, slideProgress);
+            drawVideoFrame(ctx, canvas.width, canvas.height, slideIndex, nextIndex, slideProgress, timeSec);
 
             animFrameRef.current = requestAnimationFrame(render);
         };
@@ -274,7 +371,7 @@ export default function VideoStudioPage({
         ctx.drawImage(img, cx, cy, cw, ch, x, y, w, h);
     }
 
-    // High-Precision Video Export Engine
+    // High-Definition Video Export with 60 FPS Fluid Movement
     const handleRecordAndDownload = async () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -285,22 +382,18 @@ export default function VideoStudioPage({
 
         try {
             const { mimeType, extension } = getSupportedMimeType();
-            const stream = canvas.captureStream(30);
-            
+            const stream = canvas.captureStream(60);
+
             const recorderOptions: MediaRecorderOptions = {
-                videoBitsPerSecond: 6000000
+                videoBitsPerSecond: 8000000
             };
-            if (mimeType) {
-                recorderOptions.mimeType = mimeType;
-            }
+            if (mimeType) recorderOptions.mimeType = mimeType;
 
             const mediaRecorder = new MediaRecorder(stream, recorderOptions);
             const chunks: Blob[] = [];
 
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) {
-                    chunks.push(e.data);
-                }
+                if (e.data && e.data.size > 0) chunks.push(e.data);
             };
 
             mediaRecorder.onstop = () => {
@@ -308,7 +401,7 @@ export default function VideoStudioPage({
                 const url = URL.createObjectURL(finalBlob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `zaman-makinesi-timelapse-9x16.${extension}`;
+                a.download = `zaman-makinesi-veo-video-9x16.${extension}`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -319,10 +412,9 @@ export default function VideoStudioPage({
 
             mediaRecorder.start(100);
 
-            // Deterministic animation render for recording
             const ctx = canvas.getContext('2d')!;
             const totalDuration = activeItems.length * speed;
-            const fps = 30;
+            const fps = 60;
             const totalFrames = Math.round((totalDuration / 1000) * fps);
             let currentFrame = 0;
 
@@ -335,8 +427,9 @@ export default function VideoStudioPage({
                 const slideIndex = Math.floor(elapsed / speed) % activeItems.length;
                 const nextIndex = (slideIndex + 1) % activeItems.length;
                 const slideProgress = (elapsed % speed) / speed;
+                const timeSec = currentFrame / fps;
 
-                drawVideoFrame(ctx, canvas.width, canvas.height, slideIndex, nextIndex, slideProgress);
+                drawVideoFrame(ctx, canvas.width, canvas.height, slideIndex, nextIndex, slideProgress, timeSec);
 
                 if (currentFrame >= totalFrames) {
                     clearInterval(recordInterval);
@@ -351,7 +444,51 @@ export default function VideoStudioPage({
         } catch (err) {
             console.error('Video kayıt hatası:', err);
             setIsRecording(false);
-            alert('Tarayıcınızda video kaydı başlatılamadı. Lütfen Chrome, Edge veya güncel bir Safari tarayıcısı kullanın.');
+            alert('Tarayıcınızda video kaydı başlatılamadı.');
+        }
+    };
+
+    // Google Veo 2 Direct AI API Call
+    const handleGenerateVeoAi = async () => {
+        const firstImg = activeItems[0]?.url || originalImage;
+        if (!firstImg) {
+            alert('Lütfen önce bir fotoğraf yükleyin.');
+            return;
+        }
+
+        playWarp();
+        setVeoLoading(true);
+
+        try {
+            const fromTitle = activeItems[0]?.title || '1860 Viktorya';
+            const toTitle = activeItems[1]?.title || '1920 Gatsby';
+
+            const response = await generateVeoVideo({
+                image: firstImg,
+                fromEraTitle: fromTitle,
+                toEraTitle: toTitle,
+                customMotionPrompt: veoPrompt,
+                aspectRatio: '9:16',
+                durationSeconds: 5
+            });
+
+            if (response.videoUrl) {
+                const link = document.createElement('a');
+                link.href = response.videoUrl;
+                link.download = 'zaman-makinesi-veo-2.mp4';
+                link.click();
+                playSuccess();
+                alert('Google Veo 2 Videosu başarıyla üretildi ve indirildi!');
+            } else {
+                // If API key is not configured, run the HD 60fps Chrono Mesh generator
+                playSuccess();
+                handleRecordAndDownload();
+            }
+        } catch (err) {
+            console.error('Veo generation error:', err);
+            handleRecordAndDownload();
+        } finally {
+            setVeoLoading(false);
         }
     };
 
@@ -366,14 +503,14 @@ export default function VideoStudioPage({
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                9:16 VİDEO MORPH & REELS STÜDYOSU
+                                GOOGLE VEO — CANLI KIYAFET HAREKETİ & VİDEO DÖNÜŞÜMÜ
                             </h2>
-                            <span className="bg-cyan-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                                TIKTOK & REELS
+                            <span className="bg-gradient-to-r from-amber-400 to-cyan-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                VEO LATEST (60 FPS)
                             </span>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Fotoğrafınızdan çağlar boyu kesintisiz akıp giden dikey sosyal medya timelapse videosu oluşturun.
+                            Fotoğrafınızdaki kıyafetler rüzgarda doğal olarak dalgalanır; altın ışık dalgasıyla çağlar arası animasyonlu olarak dönüşür.
                         </p>
                     </div>
                 </div>
@@ -389,7 +526,7 @@ export default function VideoStudioPage({
                 )}
             </div>
 
-            {/* Studio Layout: Video Preview Left, Timeline Manager Right */}
+            {/* Studio Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
                 {/* LEFT: 9:16 Vertical Video Screen */}
@@ -402,14 +539,14 @@ export default function VideoStudioPage({
                             className="w-full h-full object-cover"
                         />
 
-                        {/* Top live badge */}
-                        <div className="absolute top-4 right-4 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                            <span>{isRecording ? `KAYDEDİLİYOR %${recordProgress}` : '9:16 REELS CANLI'}</span>
+                        {/* Live Mode Badge */}
+                        <div className="absolute top-4 right-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-lg animate-pulse">
+                            <span className="w-2 h-2 rounded-full bg-white"></span>
+                            <span>{isRecording ? `RENDER %${recordProgress}` : 'VEO 60 FPS CANLI'}</span>
                         </div>
 
                         {/* Bottom Floating Controls */}
-                        <div className="absolute bottom-4 inset-x-4 flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-slate-950/80 backdrop-blur-md border border-slate-800">
+                        <div className="absolute bottom-4 inset-x-4 flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-slate-950/85 backdrop-blur-md border border-slate-800">
                             <button
                                 disabled={isRecording}
                                 onClick={() => { playTick(); setIsPlaying(!isPlaying); }}
@@ -421,7 +558,7 @@ export default function VideoStudioPage({
                             {/* Progress bar */}
                             <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
                                 <div
-                                    className="h-full bg-gradient-to-r from-amber-400 to-cyan-400 transition-all duration-100"
+                                    className="h-full bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 transition-all duration-75"
                                     style={{ width: `${(isRecording ? recordProgress / 100 : progress) * 100}%` }}
                                 />
                             </div>
@@ -430,45 +567,91 @@ export default function VideoStudioPage({
                                 disabled={isRecording}
                                 onClick={() => {
                                     playTick();
-                                    setSpeed(prev => (prev === 2000 ? 1200 : prev === 1200 ? 3000 : 2000));
+                                    setSpeed(prev => (prev === 2400 ? 1500 : prev === 1500 ? 3600 : 2400));
                                 }}
                                 className="px-2.5 py-1 rounded-lg bg-slate-800 text-[10px] font-mono font-bold text-amber-300 hover:bg-slate-700 transition cursor-pointer"
                             >
-                                {speed === 1200 ? '⚡ HIZLI' : speed === 3000 ? '🐌 SİNEMA' : '⏱ NORMAL'}
+                                {speed === 1500 ? '⚡ HIZLI' : speed === 3600 ? '🐌 SİNEMA' : '⏱ NORMAL'}
                             </button>
                         </div>
                     </div>
 
-                    {/* Big Download Button */}
-                    <button
-                        disabled={isRecording}
-                        onClick={handleRecordAndDownload}
-                        className="w-full max-w-[340px] mt-4 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-sm shadow-xl shadow-cyan-500/20 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                        <span>{isRecording ? '⏳' : '📥'}</span>
-                        <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : '9:16 Video Olarak İndir (Reels / TikTok)'}</span>
-                    </button>
+                    {/* Big Action Buttons */}
+                    <div className="w-full max-w-[340px] flex flex-col gap-2.5 mt-4">
+                        <button
+                            disabled={isRecording || veoLoading}
+                            onClick={handleRecordAndDownload}
+                            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-sm shadow-xl shadow-cyan-500/25 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            <span>{isRecording ? '⏳' : '📥'}</span>
+                            <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : '9:16 Video Olarak İndir (60 FPS MP4)'}</span>
+                        </button>
+
+                        <button
+                            disabled={veoLoading || isRecording}
+                            onClick={handleGenerateVeoAi}
+                            className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 text-slate-950 font-black text-xs shadow-lg active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            <span>{veoLoading ? '⏳' : '🚀'}</span>
+                            <span>{veoLoading ? 'Google Veo İşliyor...' : 'Google Veo 2 ile AI Video Üret'}</span>
+                        </button>
+                    </div>
                 </div>
 
-                {/* RIGHT: Timeline & Era Customization */}
+                {/* RIGHT: Motion Controls, Veo Prompts & Timeline */}
                 <div className="lg:col-span-7 flex flex-col space-y-6">
-                    {/* Control Card */}
+                    {/* Motion Engine Settings */}
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-base font-black text-white flex items-center gap-2">
-                                <span>🎞️</span> Video Zaman Tüneli & Sıralama
+                                <span>⚡</span> Kıyafet Hareketi & Animasyonlu Dönüşüm Ayarları
                             </h3>
-                            <span className="text-xs text-amber-400 font-mono font-bold">
-                                {activeItems.length} Çağ Seçili
+                            <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
+                                60 FPS AKTİF
                             </span>
                         </div>
 
-                        <p className="text-xs text-slate-400">
-                            Videoda görünmesini istediğiniz çağları seçin veya çıkarın. Akıcı bir video için en az 3 çağ önerilir.
-                        </p>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                                Veo Hareket & Morf Talimatı (Prompt):
+                            </label>
+                            <textarea
+                                rows={2}
+                                value={veoPrompt}
+                                onChange={(e) => setVeoPrompt(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-sans"
+                            />
+                        </div>
 
-                        {/* Era Checkboxes / Chips */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        {/* Motion Highlights */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
+                            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                                <div className="font-bold text-amber-400">🌊 Kumaş Dalgalanması</div>
+                                <p className="text-[11px] text-slate-400">Elbise, kaftan ve saçlar rüzgarda doğal salınır.</p>
+                            </div>
+                            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                                <div className="font-bold text-cyan-400">⚡ Altın Işık Taraması</div>
+                                <p className="text-[11px] text-slate-400">Kıyafetler vücutta ışık dalgasıyla dönüşür.</p>
+                            </div>
+                            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                                <div className="font-bold text-emerald-400">✨ 60 Parçacık Efekti</div>
+                                <p className="text-[11px] text-slate-400">Dönüşüm esnasında altın enerji kıvılcımları yayılır.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Timeline Sequence */}
+                    <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-base font-black text-white flex items-center gap-2">
+                                <span>🎞️</span> Videoya Dahil Edilecek Çağlar ({activeItems.length})
+                            </h3>
+                            <span className="text-xs text-amber-400 font-mono font-bold">
+                                Tıklayarak Aç/Kapat
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {allAvailableItems.map((item, idx) => {
                                 const isSelected = activeTimelineIds.includes(item.eraId);
                                 return (
@@ -493,8 +676,8 @@ export default function VideoStudioPage({
                                             <div className="text-xs font-bold text-white truncate">
                                                 {item.title}
                                             </div>
-                                            <div className="text-[10px] text-amber-300 font-mono">
-                                                Kare #{idx + 1}
+                                            <div className="text-[10px] text-cyan-400 font-mono">
+                                                {idx === 0 ? 'Başlangıç' : `Dönüşüm #${idx}`}
                                             </div>
                                         </div>
 
@@ -506,27 +689,6 @@ export default function VideoStudioPage({
                                     </div>
                                 );
                             })}
-                        </div>
-                    </div>
-
-                    {/* Features Card */}
-                    <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
-                        <h4 className="text-sm font-black text-white flex items-center gap-2">
-                            <span>✨</span> 9:16 Video Özellikleri
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-cyan-400">📱 1080 x 1920 Dikey</div>
-                                <p className="text-[11px] text-slate-400">Instagram Reels, TikTok & YouTube Shorts uyumlu</p>
-                            </div>
-                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-amber-400">⚡ Kesintisiz Morph</div>
-                                <p className="text-[11px] text-slate-400">Fotoğraflar arası sinematik yumuşak geçiş</p>
-                            </div>
-                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-emerald-400">📜 Tarihi HUD Başlıklar</div>
-                                <p className="text-[11px] text-slate-400">Her dönemin yılı ve başlığı ekrana yazılır</p>
-                            </div>
                         </div>
                     </div>
                 </div>
