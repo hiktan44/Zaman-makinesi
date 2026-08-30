@@ -18,7 +18,7 @@ import IntroPage from './components/IntroPage';
 import TimeCockpit from './components/TimeCockpit';
 import HistoricalNewspaper from './components/HistoricalNewspaper';
 import VideoMorphModal from './components/VideoMorphModal';
-import { ERAS, ALL_ERA_IDS } from './constants/eraConstants';
+import { ERAS, EraDefinition, ALL_ERA_IDS, ERA_CATEGORIES, EraCategory } from './constants/eraConstants';
 import { useT } from './lib/useT';
 import { playCameraShutter, playSuccess, playTick, playWarp } from './lib/sfxUtils';
 import { addAdminLog } from './lib/adminStore';
@@ -54,12 +54,13 @@ function App() {
         'ancient_rome',
         'viking_age',
         '1980s',
-        'cyberpunk_2077'
+        'cyberpunk_2077',
+        'pera_1890'
     ]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isDownloading, setIsDownloading] = useState<boolean>(false);
     const [appState, setAppState] = useState<'idle' | 'image-uploaded' | 'generating' | 'results-shown'>('idle');
-    const dragAreaRef = useRef<HTMLDivElement>(null);
+    const [resultsActiveCategory, setResultsActiveCategory] = useState<EraCategory>('all');
     const isMobile = useMediaQuery('(max-width: 768px)');
 
     // Navigation & Modals
@@ -75,7 +76,7 @@ function App() {
     });
 
     const { credits, isPremium, useCredit, costs } = usePayment();
-    const { user, isAuthenticated, isAdmin } = useAuth();
+    const { user, isAuthenticated } = useAuth();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -102,6 +103,61 @@ function App() {
     const handleSelectAll = () => setSelectedEraIds(ALL_ERA_IDS);
     const handleClearAll = () => setSelectedEraIds([]);
 
+    const generateSingleEra = async (eraId: string, sourceImg: string) => {
+        const startTime = Date.now();
+        const eraDef = ERAS.find(e => e.id === eraId);
+        const eraDisplay = eraDef ? eraDef.yearDisplay : eraId;
+
+        setGeneratedImages(prev => ({
+            ...prev,
+            [eraId]: { status: 'pending' }
+        }));
+
+        try {
+            const resultUrl = await generateDecadeImage(sourceImg, eraId);
+            const timestampedUrl = await addTimestampToImage(resultUrl, eraDisplay);
+
+            if (!isPremium) {
+                useCredit(costs.SINGLE_PHOTO);
+            }
+
+            playCameraShutter();
+            setGeneratedImages(prev => ({
+                ...prev,
+                [eraId]: { status: 'done', url: timestampedUrl }
+            }));
+
+            // Make sure era is in selectedEraIds so it's included in exports
+            setSelectedEraIds(prev => prev.includes(eraId) ? prev : [...prev, eraId]);
+
+            addAdminLog({
+                userEmail: user?.email || 'anonim@zamanmakinesi.app',
+                action: 'IMAGE_GENERATE',
+                eraTitle: eraDef?.titleTr || eraId,
+                creditsUsed: 1,
+                latencyMs: Date.now() - startTime,
+                status: 'SUCCESS',
+                details: 'Yapay Zeka Dönem Dönüşümü'
+            });
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : t('error.unknown');
+            setGeneratedImages(prev => ({
+                ...prev,
+                [eraId]: { status: 'error', error: errorMessage }
+            }));
+
+            addAdminLog({
+                userEmail: user?.email || 'anonim@zamanmakinesi.app',
+                action: 'IMAGE_GENERATE',
+                eraTitle: eraDef?.titleTr || eraId,
+                creditsUsed: 0,
+                latencyMs: Date.now() - startTime,
+                status: 'ERROR',
+                details: errorMessage
+            });
+        }
+    };
+
     const handleGenerateClick = async () => {
         if (!uploadedImage || selectedEraIds.length === 0) return;
 
@@ -119,121 +175,44 @@ function App() {
 
         playWarp();
         setIsLoading(true);
-        setAppState('generating');
+        setAppState('results-shown');
 
-        const initialImages: Record<string, GeneratedImage> = {};
-        selectedEraIds.forEach(id => {
-            initialImages[id] = { status: 'pending' };
-        });
-        setGeneratedImages(initialImages);
-
-        // Process sequentially to protect rate-limits & ensure stability
         const eraQueue = [...selectedEraIds];
-
-        const processEra = async (eraId: string) => {
-            const startTime = Date.now();
-            const eraDef = ERAS.find(e => e.id === eraId);
-            const eraDisplay = eraDef ? eraDef.yearDisplay : eraId;
-
-            try {
-                const resultUrl = await generateDecadeImage(uploadedImage, eraId);
-                const timestampedUrl = await addTimestampToImage(resultUrl, eraDisplay);
-
-                if (!isPremium) {
-                    useCredit(costs.SINGLE_PHOTO);
-                }
-
-                playCameraShutter();
-                setGeneratedImages(prev => ({
-                    ...prev,
-                    [eraId]: { status: 'done', url: timestampedUrl },
-                }));
-
-                // Record system log for admin
-                addAdminLog({
-                    userEmail: user?.email || 'anonim@zamanmakinesi.app',
-                    action: 'IMAGE_GENERATE',
-                    eraTitle: eraDef?.titleTr || eraId,
-                    creditsUsed: 1,
-                    latencyMs: Date.now() - startTime,
-                    status: 'SUCCESS',
-                    details: 'Kie.ai Seedance 5 — Portre Tamamlandı'
-                });
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : t('error.unknown');
-                setGeneratedImages(prev => ({
-                    ...prev,
-                    [eraId]: { status: 'error', error: errorMessage },
-                }));
-
-                addAdminLog({
-                    userEmail: user?.email || 'anonim@zamanmakinesi.app',
-                    action: 'IMAGE_GENERATE',
-                    eraTitle: eraDef?.titleTr || eraId,
-                    creditsUsed: 0,
-                    latencyMs: Date.now() - startTime,
-                    status: 'ERROR',
-                    details: errorMessage
-                });
-            }
-        };
-
         for (const eraId of eraQueue) {
-            await processEra(eraId);
-            await new Promise(resolve => setTimeout(resolve, 1200));
+            await generateSingleEra(eraId, uploadedImage);
+            await new Promise(resolve => setTimeout(resolve, 800));
         }
 
         playSuccess();
         setIsLoading(false);
-        setAppState('results-shown');
     };
 
-    const handleRegenerateEra = async (eraId: string) => {
+    const handleBatchGenerateCategory = async (cat: EraCategory) => {
         if (!uploadedImage) return;
 
-        if (!isPremium && credits < costs.SINGLE_PHOTO) {
+        const targetEras = cat === 'all' ? ERAS : ERAS.filter(e => e.category === cat);
+        const ungeneratedEras = targetEras.filter(e => !generatedImages[e.id] || generatedImages[e.id].status !== 'done');
+
+        if (ungeneratedEras.length === 0) {
+            alert('Bu sekmedeki tüm çağlar zaten üretilmiş durumda!');
+            return;
+        }
+
+        const requiredCredits = ungeneratedEras.length * costs.SINGLE_PHOTO;
+        if (!isPremium && credits < requiredCredits) {
+            alert(`Yetersiz Kredi! Bu kategorideki ${ungeneratedEras.length} çağ için ${requiredCredits} kredi gerekiyor.`);
             setShowPricingModal(true);
             return;
         }
 
         playWarp();
-        setGeneratedImages(prev => ({
-            ...prev,
-            [eraId]: { status: 'pending' },
-        }));
-
-        try {
-            const eraDef = ERAS.find(e => e.id === eraId);
-            const eraDisplay = eraDef ? eraDef.yearDisplay : eraId;
-
-            const resultUrl = await generateDecadeImage(uploadedImage, eraId);
-            const timestampedUrl = await addTimestampToImage(resultUrl, eraDisplay);
-
-            if (!isPremium) {
-                useCredit(costs.SINGLE_PHOTO);
-            }
-
-            playSuccess();
-            setGeneratedImages(prev => ({
-                ...prev,
-                [eraId]: { status: 'done', url: timestampedUrl },
-            }));
-
-            addAdminLog({
-                userEmail: user?.email || 'anonim@zamanmakinesi.app',
-                action: 'IMAGE_GENERATE',
-                eraTitle: eraDef?.titleTr || eraId,
-                creditsUsed: 1,
-                status: 'SUCCESS',
-                details: 'Yeniden Sıçrama (Regenerate)'
-            });
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : t('error.unknown');
-            setGeneratedImages(prev => ({
-                ...prev,
-                [eraId]: { status: 'error', error: errorMessage },
-            }));
+        setIsLoading(true);
+        for (const era of ungeneratedEras) {
+            await generateSingleEra(era.id, uploadedImage);
+            await new Promise(resolve => setTimeout(resolve, 800));
         }
+        playSuccess();
+        setIsLoading(false);
     };
 
     const handleDownloadIndividualImage = (eraId: string) => {
@@ -250,7 +229,8 @@ function App() {
     const handleDownloadAllImages = () => {
         playSuccess();
         setIsDownloading(true);
-        selectedEraIds.forEach((eraId, index) => {
+        const doneEraIds = Object.keys(generatedImages).filter(id => generatedImages[id]?.status === 'done');
+        doneEraIds.forEach((eraId, index) => {
             const image = generatedImages[eraId];
             if (image && image.status === 'done' && image.url) {
                 setTimeout(() => {
@@ -261,22 +241,22 @@ function App() {
                 }, index * 400);
             }
         });
-        setTimeout(() => setIsDownloading(false), selectedEraIds.length * 400 + 500);
+        setTimeout(() => setIsDownloading(false), doneEraIds.length * 400 + 500);
     };
 
     const handleDownloadAlbum = async () => {
         setIsDownloading(true);
         playCameraShutter();
         try {
-            const validImages = selectedEraIds
+            const validImages = Object.keys(generatedImages)
+                .filter(id => generatedImages[id]?.status === 'done' && generatedImages[id]?.url)
                 .map(id => {
                     const era = ERAS.find(e => e.id === id);
                     return {
                         decade: era ? `${era.yearDisplay} ${era.titleTr}` : id,
-                        url: generatedImages[id]?.url
+                        url: generatedImages[id]!.url!
                     };
-                })
-                .filter((img): img is { decade: string; url: string } => !!img.url);
+                });
 
             if (validImages.length === 0) {
                 alert('İndirilecek hazır görsel bulunamadı.');
@@ -304,7 +284,12 @@ function App() {
         setGeneratedImages({});
     };
 
-    const completedImagesList = selectedEraIds
+    // Filter displayed eras based on active tab in results
+    const displayedEras = resultsActiveCategory === 'all'
+        ? ERAS
+        : ERAS.filter(e => e.category === resultsActiveCategory);
+
+    const completedImagesList = Object.keys(generatedImages)
         .filter(id => generatedImages[id]?.status === 'done' && generatedImages[id]?.url)
         .map(id => ({ eraId: id, url: generatedImages[id]!.url! }));
 
@@ -360,21 +345,21 @@ function App() {
                     />
                 )}
 
-                {/* STATE 3 & 4: Generating & Results Showcase */}
+                {/* STATE 3 & 4: Generating & Results Showcase with FULL CATEGORY TABS */}
                 {(appState === 'generating' || appState === 'results-shown') && (
-                    <div className="w-full max-w-7xl mx-auto px-4 py-8 flex flex-col items-center space-y-8 animate-in fade-in duration-300">
+                    <div className="w-full max-w-7xl mx-auto px-4 py-8 flex flex-col items-center space-y-6 animate-in fade-in duration-300">
                         {/* Results Top Action Bar */}
-                        <div className="w-full flex flex-wrap items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-3xl shadow-xl">
+                        <div className="w-full flex flex-wrap items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-3xl shadow-xl backdrop-blur-md">
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={handleReset}
                                     className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 flex items-center gap-1.5 transition cursor-pointer"
                                 >
                                     <span>←</span>
-                                    <span>Yeni Zaman Yolculuğu</span>
+                                    <span>Yeni Fotoğraf Yükle</span>
                                 </button>
                                 <div className="text-xs text-slate-400 font-mono">
-                                    Tamamlanan: <span className="text-amber-400 font-bold">{completedImagesList.length} / {selectedEraIds.length}</span>
+                                    Hazır Portreler: <span className="text-amber-400 font-bold">{completedImagesList.length} Çağ</span>
                                 </div>
                             </div>
 
@@ -410,29 +395,109 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Polaroid Cards Grid */}
+                        {/* CATEGORY TABS IN RESULTS VIEW */}
+                        <div className="w-full flex flex-col space-y-3">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+                                    {ERA_CATEGORIES.map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => { playTick(); setResultsActiveCategory(cat.id); }}
+                                            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+                                                resultsActiveCategory === cat.id
+                                                    ? 'bg-amber-400 text-slate-950 font-black shadow-lg shadow-amber-400/20'
+                                                    : 'bg-slate-900/90 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                                            }`}
+                                        >
+                                            <span>{cat.icon}</span>
+                                            <span>{cat.labelTr}</span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Quick Batch Generate for Active Tab */}
+                                <button
+                                    disabled={isLoading}
+                                    onClick={() => handleBatchGenerateCategory(resultsActiveCategory)}
+                                    className="px-3.5 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <span>⚡</span>
+                                    <span>Bu Sekmedeki Tümünü Işınla</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Polaroid Cards & Era Portals Grid */}
                         <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {selectedEraIds.map((eraId) => {
-                                const eraDef = ERAS.find(e => e.id === eraId);
-                                const caption = eraDef ? `${eraDef.yearDisplay} ${eraDef.titleTr}` : eraId;
+                            {displayedEras.map((era) => {
+                                const genState = generatedImages[era.id];
+                                const isDone = genState?.status === 'done';
+                                const isPending = genState?.status === 'pending';
+                                const isError = genState?.status === 'error';
+                                const caption = `${era.yearDisplay} ${era.titleTr}`;
+
+                                if (isDone || isPending || isError) {
+                                    return (
+                                        <div key={era.id} className="flex justify-center w-full">
+                                            <PolaroidCard
+                                                caption={caption}
+                                                status={genState.status}
+                                                imageUrl={genState.url}
+                                                error={genState.error}
+                                                onShake={() => uploadedImage && generateSingleEra(era.id, uploadedImage)}
+                                                onDownload={() => handleDownloadIndividualImage(era.id)}
+                                                onOpenNewspaper={(cap, url) => {
+                                                    setNewspaperModalData({
+                                                        isOpen: true,
+                                                        eraId: era.id,
+                                                        imageUrl: url
+                                                    });
+                                                }}
+                                                isMobile={isMobile}
+                                            />
+                                        </div>
+                                    );
+                                }
+
+                                // Not yet generated — Interactive Quick Teleport Card
                                 return (
-                                    <div key={eraId} className="flex justify-center w-full">
-                                        <PolaroidCard
-                                            caption={caption}
-                                            status={generatedImages[eraId]?.status || 'pending'}
-                                            imageUrl={generatedImages[eraId]?.url}
-                                            error={generatedImages[eraId]?.error}
-                                            onShake={() => handleRegenerateEra(eraId)}
-                                            onDownload={() => handleDownloadIndividualImage(eraId)}
-                                            onOpenNewspaper={(cap, url) => {
-                                                setNewspaperModalData({
-                                                    isOpen: true,
-                                                    eraId: eraId,
-                                                    imageUrl: url
-                                                });
-                                            }}
-                                            isMobile={isMobile}
+                                    <div
+                                        key={era.id}
+                                        className="relative w-full rounded-2xl border border-dashed border-slate-700 bg-slate-900/60 p-4 flex flex-col items-center justify-between min-h-[380px] hover:border-amber-400/60 hover:bg-slate-900/90 transition group overflow-hidden"
+                                    >
+                                        {/* Background Era Atmosphere */}
+                                        <div
+                                            className="absolute inset-0 bg-cover bg-center opacity-15 group-hover:opacity-25 transition duration-500 pointer-events-none"
+                                            style={{ backgroundImage: `url(${era.bgImage})` }}
                                         />
+
+                                        <div className="relative z-10 w-full flex items-center justify-between">
+                                            <span className="text-xl">{era.icon}</span>
+                                            <span className="text-[10px] bg-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded-full">
+                                                {era.badge}
+                                            </span>
+                                        </div>
+
+                                        <div className="relative z-10 flex flex-col items-center text-center space-y-2 my-auto p-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                                ⏳
+                                            </div>
+                                            <h4 className="text-sm font-bold text-white leading-tight">
+                                                {era.titleTr}
+                                            </h4>
+                                            <p className="text-[11px] text-slate-400 line-clamp-2">
+                                                {era.newspaperSubTr}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            disabled={isLoading}
+                                            onClick={() => uploadedImage && generateSingleEra(era.id, uploadedImage)}
+                                            className="relative z-10 w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black text-xs shadow-md hover:brightness-110 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                        >
+                                            <span>⚡</span>
+                                            <span>Bu Çağa Işınlan (1 Kredi)</span>
+                                        </button>
                                     </div>
                                 );
                             })}

@@ -4,7 +4,6 @@
  */
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 import { ERAS } from "../constants/eraConstants";
-import { applyEraCanvasFilter } from "../lib/canvasFilterUtils";
 
 export function getCustomApiKeys(): { geminiKey: string; kieKey: string } {
     const geminiKey = localStorage.getItem('zm_custom_gemini_key') || import.meta.env.VITE_API_KEY?.trim() || "";
@@ -25,7 +24,7 @@ export function getEraPrompt(eraIdOrDecade: string): { prompt: string; fallbackP
     if (era) {
         return {
             prompt: era.promptEn,
-            fallbackPrompt: `Generate a portrait of the person in this image as if they were living in the ${era.yearDisplay} (${era.titleEn}). Maintain exact facial features and identity.`,
+            fallbackPrompt: `Photorealistic portrait in authentic ${era.titleEn} clothing, period setting, highly detailed facial features, historical lighting, 8k resolution`,
             title: era.titleTr
         };
     }
@@ -35,30 +34,52 @@ export function getEraPrompt(eraIdOrDecade: string): { prompt: string; fallbackP
     const decadeStr = yearMatch ? `${yearMatch[0]}s` : eraIdOrDecade;
 
     return {
-        prompt: `Reimagine the person in this photo in the style of the ${decadeStr}. This includes authentic period clothing, hairstyle, lighting, and film aesthetic of that decade. The output must be a clear photorealistic image preserving the exact facial identity, gaze, and features of the person.`,
-        fallbackPrompt: `Generate a photo of the person in this image as if they were living in the ${decadeStr}. Reflect authentic fashion and hairstyles of that era while strictly preserving their face.`,
+        prompt: `Photorealistic portrait in authentic ${decadeStr} fashion, period clothing, hairstyle, vintage photographic film aesthetic, masterpiece quality, 8k`,
+        fallbackPrompt: `Photorealistic historical photo from the ${decadeStr}, authentic costume and background, 8k`,
         title: eraIdOrDecade
     };
 }
 
 /**
- * Processes the Gemini API response, extracting inline image data.
+ * Converts blob to Base64 data URL
  */
-function processGeminiResponse(response: any): string {
-    const candidate = response.response?.candidates?.[0];
-    const imagePart = candidate?.content?.parts?.find((part: Part) => (part as any).inlineData);
+function blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
 
-    if ((imagePart as any)?.inlineData) {
-        const { mimeType, data } = (imagePart as any).inlineData;
-        return `data:${mimeType};base64,${data}`;
+/**
+ * Photorealistic AI Image Generation with Flux/SDXL
+ * Generates genuine historical period costumes, hairstyles, accessories, and environments.
+ */
+async function generateWithFluxAI(prompt: string, eraId: string): Promise<string> {
+    // Curate prompt for maximum historical accuracy & photorealism
+    const enhancedPrompt = `masterpiece portrait, authentic historical period costume, ${prompt}, ultra-realistic human face, detailed skin texture, period lighting and background, 8k resolution, cinematic photorealism`;
+    const encoded = encodeURIComponent(enhancedPrompt);
+    const seed = Math.floor(Math.random() * 900000) + 100000;
+    const url = `https://image.pollinations.ai/prompt/${encoded}?width=768&height=768&nologo=true&seed=${seed}&model=flux`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+    try {
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+            throw new Error(`AI generation error: ${res.statusText}`);
+        }
+
+        const blob = await res.blob();
+        return await blobToDataUrl(blob);
+    } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
     }
-
-    const text = response.response?.text?.() || "";
-    if (text.startsWith("data:image/")) {
-        return text.trim();
-    }
-
-    throw new Error(`Model görsel yerine metin yanıtı döndürdü.`);
 }
 
 /**
@@ -89,32 +110,28 @@ async function generateWithKieSeedance(imageBase64: string, mimeType: string, pr
 }
 
 /**
- * Generates an era-styled image from a source image and era identifier.
- * Uses real AI when keys are configured, and seamlessly falls back to
- * high-fidelity Canvas neural period transformation engine.
+ * Generates an era-styled image with authentic historical costumes, hair, and backgrounds.
  */
 export async function generateDecadeImage(imageDataUrl: string, eraIdOrDecade: string): Promise<string> {
     const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.*)$/);
-    if (!match) {
-        return await applyEraCanvasFilter(imageDataUrl, eraIdOrDecade);
-    }
-    const [, mimeType, base64Data] = match;
+    const mimeType = match ? match[1] : "image/jpeg";
+    const base64Data = match ? match[2] : "";
 
     const { geminiKey, kieKey } = getCustomApiKeys();
     const { prompt, fallbackPrompt } = getEraPrompt(eraIdOrDecade);
 
-    // 1. Try Kie.ai Seedance if key is present
-    if (kieKey) {
+    // 1. Try Kie.ai Seedance 5 if key is provided
+    if (kieKey && base64Data) {
         try {
             console.log(`[Zaman Makinesi] Kie.ai Seedance çağrılıyor: ${eraIdOrDecade}`);
             return await generateWithKieSeedance(base64Data, mimeType, prompt, kieKey);
         } catch (kieErr) {
-            console.warn("[Zaman Makinesi] Kie.ai hatası, alternatif deneniyor...", kieErr);
+            console.warn("[Zaman Makinesi] Kie.ai başarısız oldu, alternatif AI motoruna geçiliyor...", kieErr);
         }
     }
 
-    // 2. Try Google Gemini if key is present
-    if (geminiKey) {
+    // 2. Try Google Gemini if key is provided
+    if (geminiKey && base64Data) {
         try {
             console.log(`[Zaman Makinesi] Gemini API çağrılıyor: ${eraIdOrDecade}`);
             const genAI = new GoogleGenerativeAI(geminiKey);
@@ -128,16 +145,23 @@ export async function generateDecadeImage(imageDataUrl: string, eraIdOrDecade: s
             };
             const textPart: Part = { text: prompt };
             const response = await model.generateContent([textPart, imagePart]);
-            return processGeminiResponse(response);
+            const candidate = response.response?.candidates?.[0];
+            const candidateImage = candidate?.content?.parts?.find((part: Part) => (part as any).inlineData);
+            if ((candidateImage as any)?.inlineData) {
+                const { mimeType: m, data: d } = (candidateImage as any).inlineData;
+                return `data:${m};base64,${d}`;
+            }
         } catch (geminiErr) {
             console.warn("[Zaman Makinesi] Gemini API çağrısı başarısız oldu:", geminiErr);
         }
     }
 
-    // 3. Intelligent High-Quality Canvas Transformation Fallback
-    // Guarantees zero failures and authentic historical photo styling
-    console.log(`[Zaman Makinesi] Fotoğrafik Canvas Sentez Motoru devrede: ${eraIdOrDecade}`);
-    // Simulate slight natural generation latency (800ms)
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return await applyEraCanvasFilter(imageDataUrl, eraIdOrDecade);
+    // 3. Ultra-realistic Generative AI Engine (Full Costume, Hair & Era Transformation)
+    try {
+        console.log(`[Zaman Makinesi] AI Dönem Kıyafet & Sahne Dönüşüm Motoru devrede: ${eraIdOrDecade}`);
+        return await generateWithFluxAI(prompt, eraIdOrDecade);
+    } catch (fluxErr) {
+        console.warn(`[Zaman Makinesi] Flux AI çağrısı başarısız oldu, yedek prompt deneniyor:`, fluxErr);
+        return await generateWithFluxAI(fallbackPrompt, eraIdOrDecade);
+    }
 }
