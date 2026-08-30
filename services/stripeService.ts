@@ -4,14 +4,10 @@
  */
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 
-// Stripe public key - replace with your actual publishable key
 const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
-/**
- * Get or initialize Stripe instance
- */
 export const getStripe = () => {
     if (!stripePromise) {
         stripePromise = loadStripe(STRIPE_PUBLIC_KEY);
@@ -19,12 +15,6 @@ export const getStripe = () => {
     return stripePromise;
 };
 
-/**
- * Create a Stripe Checkout session
- * @param priceId The Stripe Price ID for the product
- * @param successUrl URL to redirect after successful payment
- * @param cancelUrl URL to redirect if payment is cancelled
- */
 export async function createCheckoutSession(
     priceId: string,
     successUrl: string,
@@ -36,29 +26,15 @@ export async function createCheckoutSession(
         throw new Error('Stripe yüklenemedi. Lütfen sayfayı yenileyin.');
     }
 
-    // In a real application, you would call your backend to create a checkout session
-    // For now, we'll redirect directly to Stripe Checkout
-    // You'll need to implement a backend endpoint for this
-
     try {
-        // This is a placeholder - you need to implement your backend endpoint
         const response = await fetch('/api/create-checkout-session', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                priceId,
-                successUrl,
-                cancelUrl,
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ priceId, successUrl, cancelUrl }),
         });
 
         const session = await response.json();
-
-        // Redirect to Stripe Checkout
-        // @ts-ignore - redirectToCheckout may not be in the type definitions
-        const result = await stripe.redirectToCheckout({
+        const result = await (stripe as any).redirectToCheckout({
             sessionId: session.id,
         });
 
@@ -72,43 +48,81 @@ export async function createCheckoutSession(
 }
 
 /**
- * Pricing tiers
+ * Modern Tiered Credit Packages
  */
+export const PRICING_PACKAGES = [
+    {
+        id: 'capsule_25',
+        name: 'Zaman Kapsülü',
+        price: '49 ₺',
+        priceUsd: '$1.49',
+        credits: 25,
+        badge: 'Başlangıç',
+        isPopular: false,
+        features: [
+            '25 Adet Zaman Yolculuğu Görseli',
+            'Tüm Tarihi & Gelecek Çağlar Açık',
+            'Tarihi Gazete & Pasaport Oluşturma',
+            'Yüksek Çözünürlüklü Polaroid İndirme',
+            'Süre sınırı yok (Krediler yanmaz)'
+        ]
+    },
+    {
+        id: 'traveler_75',
+        name: 'Zaman Gezgini',
+        price: '99 ₺',
+        priceUsd: '$2.99',
+        credits: 75,
+        badge: 'En Popüler 🔥',
+        isPopular: true,
+        features: [
+            '75 Adet Zaman Yolculuğu Görseli',
+            '15 Video Morph / Timelapse Klip Hakkı',
+            'Öncelikli Ultra Hızlı AI Motoru',
+            'Tarihi Gazete & Pasaport PDF/PNG Çıktısı',
+            'Ticari Kullanım İzni',
+            'Süre sınırı yok (Krediler yanmaz)'
+        ]
+    },
+    {
+        id: 'timelord_250',
+        name: 'Zaman Lordu',
+        price: '199 ₺',
+        priceUsd: '$5.99',
+        credits: 250,
+        badge: 'En Avantajlı ⚡',
+        isPopular: false,
+        features: [
+            '250 Adet Zaman Yolculuğu Görseli',
+            '50 Video Morph / Timelapse Klip Hakkı',
+            '4K Ultra HD Upscaling Desteği',
+            'Toplu İndirme & Özel Albüm PDF',
+            'Sınırsız Tarihi Gazete & Pasaport',
+            '7/24 VIP Destek'
+        ]
+    }
+];
+
 export const PRICING_TIERS = {
     FREE: {
         name: 'Ücretsiz Deneme',
         price: 0,
-        credits: 3,
+        credits: 5,
         features: [
-            '3 görsel oluşturma hakkı',
-            'Tüm on yıllar erişimi',
-            'Temel özellikler',
+            '5 Ücretsiz Görsel Oluşturma',
+            'Tüm Çağlara Erişim',
+            'Standart Kalite',
         ],
     },
     PREMIUM: {
-        name: 'Premium',
-        price: 49.99,
-        priceId: 'price_premium', // Replace with your actual Stripe Price ID
-        credits: -1, // Unlimited
+        name: 'Zaman Gezgini',
+        price: 99,
+        priceId: 'price_traveler_75',
+        credits: 75,
         features: [
-            'Sınırsız görsel oluşturma',
-            'Tüm on yıllar erişimi',
-            'Yüksek çözünürlük',
-            'Toplu indirme',
-            'Öncelikli destek',
-            'Reklamsız deneyim',
+            '75 Görsel + Video Morph',
+            'Öncelikli Render',
+            'Tarihi Gazete & Pasaport'
         ],
-    },
-    PAY_AS_YOU_GO: {
-        name: 'Kullandıkça Öde',
-        price: 9.99,
-        priceId: 'price_payg', // Replace with your actual Stripe Price ID
-        credits: 10,
-        features: [
-            '10 görsel oluşturma hakkı',
-            'Tüm on yıllar erişimi',
-            'Standart özellikler',
-            '30 gün geçerlilik',
-        ],
-    },
+    }
 };

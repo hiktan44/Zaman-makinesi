@@ -4,23 +4,39 @@
  */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+export interface CreditCosts {
+    SINGLE_PHOTO: number;
+    NEWSPAPER_EXPORT: number;
+    PASSPORT_EXPORT: number;
+    VIDEO_MORPH: number;
+}
+
+export const CREDIT_COSTS: CreditCosts = {
+    SINGLE_PHOTO: 1,
+    NEWSPAPER_EXPORT: 1,
+    PASSPORT_EXPORT: 1,
+    VIDEO_MORPH: 5,
+};
+
 interface PaymentContextType {
     credits: number;
     isPremium: boolean;
-    useCredit: () => boolean;
+    useCredit: (amount?: number) => boolean;
     addCredits: (amount: number) => void;
     setPremium: (value: boolean) => void;
+    costs: CreditCosts;
 }
 
 const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'zaman_makinesi_credits';
 const PREMIUM_KEY = 'zaman_makinesi_premium';
+const INITIAL_FREE_CREDITS = 5; // 5 Ücretsiz Başlangıç Kredisi
 
 export function PaymentProvider({ children }: { children: ReactNode }) {
     const [credits, setCredits] = useState<number>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? parseInt(saved, 10) : 3; // Start with 3 free credits
+        return saved ? parseInt(saved, 10) : INITIAL_FREE_CREDITS;
     });
 
     const [isPremium, setIsPremium] = useState<boolean>(() => {
@@ -38,13 +54,13 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(PREMIUM_KEY, isPremium.toString());
     }, [isPremium]);
 
-    const useCredit = (): boolean => {
+    const useCredit = (amount: number = 1): boolean => {
         if (isPremium) {
             return true; // Premium users have unlimited credits
         }
 
-        if (credits > 0) {
-            setCredits(prev => prev - 1);
+        if (credits >= amount) {
+            setCredits(prev => Math.max(0, prev - amount));
             return true;
         }
 
@@ -60,7 +76,7 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <PaymentContext.Provider value={{ credits, isPremium, useCredit, addCredits, setPremium }}>
+        <PaymentContext.Provider value={{ credits, isPremium, useCredit, addCredits, setPremium, costs: CREDIT_COSTS }}>
             {children}
         </PaymentContext.Provider>
     );
