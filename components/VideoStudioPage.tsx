@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { ERAS } from '../constants/eraConstants';
 import { playCameraShutter, playSuccess, playTick, playWarp } from '../lib/sfxUtils';
-import { generateVeoVideo } from '../services/veoVideoService';
 
 interface VideoStudioPageProps {
     images: { eraId: string; url: string }[];
@@ -19,7 +17,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = () => {
-            console.warn('Görsel yüklenemedi, yedek kullanılıyor:', src);
+            console.warn('Görsel yüklenemedi:', src);
             resolve(img);
         };
         img.src = src;
@@ -46,185 +44,214 @@ function getSupportedMimeType(): { mimeType: string; extension: string } {
     return { mimeType: '', extension: 'webm' };
 }
 
-interface Particle {
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    size: number;
-    alpha: number;
+interface EraTheme {
+    id: string;
+    year: string;
+    title: string;
     color: string;
+    secondaryColor: string;
+    particleColor: string;
+    filterTint: string;
 }
 
+const ERA_THEMES: EraTheme[] = [
+    {
+        id: 'present',
+        year: '2026',
+        title: 'Günümüz — Orijinal Görünüm',
+        color: '#38bdf8',
+        secondaryColor: '#818cf8',
+        particleColor: '#67e8f9',
+        filterTint: 'none'
+    },
+    {
+        id: '1920s',
+        year: '1920’ler',
+        title: 'Great Gatsby & Caz Çağı',
+        color: '#fbbf24',
+        secondaryColor: '#f59e0b',
+        particleColor: '#fde68a',
+        filterTint: 'sepia(0.2) contrast(1.1) brightness(1.05)'
+    },
+    {
+        id: 'ottoman',
+        year: '1550',
+        title: 'Osmanlı Saray İhtişamı & Kaftan',
+        color: '#10b981',
+        secondaryColor: '#d97706',
+        particleColor: '#34d399',
+        filterTint: 'contrast(1.15) saturate(1.2)'
+    },
+    {
+        id: 'wild_west',
+        year: '1885',
+        title: 'Vahşi Batı & Şerif Yeleği',
+        color: '#b45309',
+        secondaryColor: '#92400e',
+        particleColor: '#d97706',
+        filterTint: 'sepia(0.4) contrast(1.2)'
+    },
+    {
+        id: 'egypt',
+        year: 'M.Ö. 1350',
+        title: 'Antik Mısır Altın Zarafeti',
+        color: '#eab308',
+        secondaryColor: '#06b6d4',
+        particleColor: '#facc15',
+        filterTint: 'sepia(0.3) saturate(1.3)'
+    },
+    {
+        id: 'cyberpunk',
+        year: '2077',
+        title: 'Cyberpunk Neon & Sibernetik',
+        color: '#ec4899',
+        secondaryColor: '#06b6d4',
+        particleColor: '#f472b6',
+        filterTint: 'contrast(1.25) hue-rotate(15deg)'
+    }
+];
+
 export default function VideoStudioPage({
-    images,
     originalImage,
     onNavigateToCockpit
 }: VideoStudioPageProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [userImage, setUserImage] = useState<string>(originalImage || '/images/demo-original.png');
+    const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
+
     const [isPlaying, setIsPlaying] = useState(true);
-    const [speed, setSpeed] = useState<number>(2400); // ms per era
+    const [speed, setSpeed] = useState<number>(3000); // ms per era
     const [isRecording, setIsRecording] = useState(false);
     const [recordProgress, setRecordProgress] = useState(0);
     const [progress, setProgress] = useState(0);
-    const [activeTimelineIds, setActiveTimelineIds] = useState<string[]>([]);
-    const [loadedImgMap, setLoadedImgMap] = useState<Record<string, HTMLImageElement>>({});
-    const [veoLoading, setVeoLoading] = useState(false);
-    const [veoPrompt, setVeoPrompt] = useState('Kıyafetler rüzgarda doğal olarak dalgalansın, altın tozlu ışık halkasıyla çağlar arası akıcı kıyafet dönüşümü olsun.');
-    const [activeMode, setActiveMode] = useState<'chrono_mesh' | 'veo_ai'>('chrono_mesh');
+    const [activeEraIndex, setActiveEraIndex] = useState(0);
     const animFrameRef = useRef<number | null>(null);
-    const particlesRef = useRef<Particle[]>([]);
 
-    // Fallback demo portraits
-    const demoItems = [
-        { eraId: 'present', title: '2026 GÜNÜMÜZ', url: '/images/demo-original.png' },
-        { eraId: '1920s', title: '1920’ler — Great Gatsby & Caz', url: '/images/demo-gatsby.jpg' },
-        { eraId: 'ottoman_sultan', title: '1550 Osmanlı Saray İhtişamı', url: '/images/demo-ottoman.jpg' },
-        { eraId: 'wild_west_1880', title: '1885 Vahşi Batı Şerifi', url: '/images/demo-west.jpg' },
-        { eraId: 'ancient_egypt', title: 'M.Ö. 1350 Antik Mısır Kraliçesi', url: '/images/demo-egypt.jpg' },
-        { eraId: 'cyberpunk_2077', title: '2077 Cyberpunk Neo-İstanbul', url: '/images/demo-cyberpunk.jpg' }
-    ];
-
-    const hasUserImages = images.length > 0;
-
-    const userTimelineItems = [
-        ...(originalImage ? [{ eraId: 'present', title: '2026 GÜNÜMÜZ (Orijinal)', url: originalImage }] : []),
-        ...images.map(img => {
-            const era = ERAS.find(e => e.id === img.eraId);
-            return {
-                eraId: img.eraId,
-                title: era ? `${era.yearDisplay} — ${era.titleTr}` : img.eraId,
-                url: img.url
-            };
-        })
-    ];
-
-    const allAvailableItems = hasUserImages ? userTimelineItems : demoItems;
+    // Particles system
+    const particlesRef = useRef<Array<{ x: number; y: number; vx: number; vy: number; size: number; alpha: number; color: string }>>([]);
 
     useEffect(() => {
-        if (activeTimelineIds.length === 0) {
-            setActiveTimelineIds(allAvailableItems.map(i => i.eraId));
+        if (originalImage) {
+            setUserImage(originalImage);
         }
-    }, [allAvailableItems.length]);
+    }, [originalImage]);
 
-    // Preload images
+    // Load single source image
     useEffect(() => {
         let isMounted = true;
-        Promise.all(
-            allAvailableItems.map(async (item) => {
-                const img = await loadImage(item.url);
-                return { eraId: item.eraId, img };
-            })
-        ).then(results => {
-            if (!isMounted) return;
-            const map: Record<string, HTMLImageElement> = {};
-            results.forEach(r => { map[r.eraId] = r.img; });
-            setLoadedImgMap(map);
+        loadImage(userImage).then(img => {
+            if (isMounted) {
+                setLoadedImage(img);
+            }
         });
 
-        // Initialize particles
-        const initialParticles: Particle[] = [];
-        for (let i = 0; i < 60; i++) {
-            initialParticles.push({
+        // Initialize sparkles
+        const parts: Array<{ x: number; y: number; vx: number; vy: number; size: number; alpha: number; color: string }> = [];
+        for (let i = 0; i < 70; i++) {
+            parts.push({
                 x: Math.random() * 1080,
                 y: Math.random() * 1920,
                 vx: (Math.random() - 0.5) * 2,
-                vy: -Math.random() * 3 - 1,
-                size: Math.random() * 4 + 2,
+                vy: -Math.random() * 3.5 - 1,
+                size: Math.random() * 5 + 2,
                 alpha: Math.random() * 0.8 + 0.2,
-                color: Math.random() > 0.5 ? '#fbbf24' : '#22d3ee'
+                color: '#fbbf24'
             });
         }
-        particlesRef.current = initialParticles;
+        particlesRef.current = parts;
 
         return () => { isMounted = false; };
-    }, [allAvailableItems]);
+    }, [userImage]);
 
-    const activeItems = allAvailableItems.filter(i => activeTimelineIds.includes(i.eraId));
-
-    const toggleItem = (id: string) => {
-        playTick();
-        setActiveTimelineIds(prev =>
-            prev.includes(id) ? (prev.length > 2 ? prev.filter(x => x !== id) : prev) : [...prev, id]
-        );
+    const handleCustomUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                playTick();
+                setUserImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     /**
-     * Draws the dynamic video frame with natural 2.5D cloth movement,
-     * natural body breathing & the animated Chrono-Morph Wave transition.
+     * Renders the single living human with realistic motion and procedural era outfit overlays
+     * Clean full-bleed video WITHOUT ANY OBSTRUCTIVE BANDS on top of the face/person!
      */
-    const drawVideoFrame = (
+    const renderLivingCharacterFrame = (
         ctx: CanvasRenderingContext2D,
         w: number,
         h: number,
-        slideIndex: number,
-        nextIndex: number,
-        slideProgress: number,
-        timeSec: number
+        timeSec: number,
+        currentEraIdx: number,
+        nextEraIdx: number,
+        morphProgress: number
     ) => {
-        const currentItem = activeItems[slideIndex];
-        const nextItem = activeItems[nextIndex];
+        if (!loadedImage || !loadedImage.complete || loadedImage.naturalWidth === 0) return;
 
-        const currentImg = currentItem ? loadedImgMap[currentItem.eraId] : null;
-        const nextImg = nextItem ? loadedImgMap[nextItem.eraId] : null;
+        const currentEra = ERA_THEMES[currentEraIdx];
+        const nextEra = ERA_THEMES[nextEraIdx];
 
-        // 1. Background
-        ctx.fillStyle = '#030712';
+        // 1. Clean Background
+        ctx.fillStyle = '#05070e';
         ctx.fillRect(0, 0, w, h);
 
-        // 2. Dynamic 2.5D Natural Motion (Breathing, Swaying, Fabric Flutter)
-        const breathe = Math.sin(timeSec * 2.2) * 6;
-        const swayX = Math.sin(timeSec * 1.5) * 8;
-        const scaleZoom = 1.03 + Math.sin(timeSec * 0.8) * 0.02;
+        // 2. Continuous Organic Living Motion Physics
+        // Breathing motion
+        const breatheY = Math.sin(timeSec * 2.4) * 8;
+        const breatheScale = 1.0 + Math.sin(timeSec * 2.4) * 0.012;
+        // Head / camera swaying
+        const swayX = Math.sin(timeSec * 1.6) * 10;
+        const tiltAngle = (Math.sin(timeSec * 1.2) * 0.8 * Math.PI) / 180;
+        // Smooth camera drift
+        const camZoom = 1.04 + Math.sin(timeSec * 0.7) * 0.03;
 
         ctx.save();
-        ctx.translate(w / 2 + swayX, h / 2 + breathe);
-        ctx.scale(scaleZoom, scaleZoom);
+        ctx.translate(w / 2 + swayX, h / 2 + breatheY);
+        ctx.rotate(tiltAngle);
+        ctx.scale(breatheScale * camZoom, breatheScale * camZoom);
         ctx.translate(-w / 2, -h / 2);
 
-        // 3. Draw current era base image
-        if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
-            ctx.globalAlpha = 1;
-            drawImageProp(ctx, currentImg, 0, 0, w, h, 0.5, 0.5);
+        // 3. Draw The Single Living Person Base Image
+        drawImageCover(ctx, loadedImage, 0, 0, w, h);
+
+        // 4. Hair / Cloth Wind Simulation (Dynamic waving highlights around shoulders & chest)
+        const windWave = Math.sin(timeSec * 5.0) * 8;
+        const chestY = h * 0.62;
+
+        // 5. Draw Animated Procedural Historical Outfit Elements on the Single Person
+        drawProceduralOutfit(ctx, w, h, chestY, timeSec, currentEra, 1.0 - morphProgress * 0.6);
+        if (morphProgress > 0) {
+            drawProceduralOutfit(ctx, w, h, chestY, timeSec, nextEra, morphProgress);
         }
 
-        // 4. ANIMATED OUTFIT MORPH WAVE (Sweeping Dynamic Chrono Scanline)
-        const isMorphing = slideProgress > 0.45; // Start morph at 45% of era duration
-        if (isMorphing && nextImg && nextImg.complete && nextImg.naturalWidth > 0) {
-            const morphRatio = (slideProgress - 0.45) / 0.55; // 0.0 -> 1.0
-            const scanY = morphRatio * (h + 200) - 100; // Top to bottom scan line
+        // 6. Glowing Chrono-Morph Wave (Sweeps down the body when morphing)
+        if (morphProgress > 0.05 && morphProgress < 0.95) {
+            const waveY = morphProgress * (h * 0.75) + (h * 0.2); // Sweeps across chest and dress
 
-            // Clip and draw the incoming transformed era outfit above scan line
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, 0, w, Math.max(0, scanY));
-            ctx.clip();
+            // Luminous golden / cyan energy line
+            const waveGrad = ctx.createLinearGradient(0, waveY - 40, 0, waveY + 40);
+            waveGrad.addColorStop(0, 'rgba(34, 211, 238, 0)');
+            waveGrad.addColorStop(0.4, 'rgba(251, 191, 36, 0.7)');
+            waveGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
+            waveGrad.addColorStop(0.6, 'rgba(34, 211, 238, 0.7)');
+            waveGrad.addColorStop(1, 'rgba(251, 191, 36, 0)');
 
-            ctx.globalAlpha = 1;
-            drawImageProp(ctx, nextImg, 0, 0, w, h, 0.5, 0.5);
-            ctx.restore();
+            ctx.fillStyle = waveGrad;
+            ctx.fillRect(0, waveY - 35, w, 70);
 
-            // 5. Glowing Chrono Energy Laser Line & Plasma Ripple
-            const laserGrad = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30);
-            laserGrad.addColorStop(0, 'rgba(34, 211, 238, 0)');
-            laserGrad.addColorStop(0.4, 'rgba(251, 191, 36, 0.8)');
-            laserGrad.addColorStop(0.5, 'rgba(255, 255, 255, 1)');
-            laserGrad.addColorStop(0.6, 'rgba(34, 211, 238, 0.8)');
-            laserGrad.addColorStop(1, 'rgba(251, 191, 36, 0)');
-
-            ctx.fillStyle = laserGrad;
-            ctx.fillRect(0, scanY - 25, w, 50);
-
-            // Shimmering horizontal wave
+            // Shimmering plasma laser wave
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 4;
-            ctx.shadowColor = '#fbbf24';
-            ctx.shadowBlur = 20;
+            ctx.shadowColor = nextEra.color;
+            ctx.shadowBlur = 25;
             ctx.beginPath();
-            for (let x = 0; x < w; x += 10) {
-                const waveOffset = Math.sin(x * 0.05 + timeSec * 15) * 8;
-                if (x === 0) ctx.moveTo(x, scanY + waveOffset);
-                else ctx.lineTo(x, scanY + waveOffset);
+            for (let x = 0; x < w; x += 12) {
+                const sineOff = Math.sin(x * 0.04 + timeSec * 16) * 10;
+                if (x === 0) ctx.moveTo(x, waveY + sineOff);
+                else ctx.lineTo(x, waveY + sineOff);
             }
             ctx.stroke();
             ctx.shadowBlur = 0;
@@ -232,72 +259,206 @@ export default function VideoStudioPage({
 
         ctx.restore();
 
-        // 6. Floating Temporal Energy Particles & Sparkles
+        // 7. Ambient Floating Temporal Particles (Living Atmosphere)
         particlesRef.current.forEach(p => {
             p.y += p.vy;
-            p.x += p.vx + Math.sin(timeSec * 3 + p.y * 0.01) * 0.8;
+            p.x += p.vx + Math.sin(timeSec * 3 + p.y * 0.01) * 1.2;
             if (p.y < 0) {
                 p.y = h;
                 p.x = Math.random() * w;
             }
 
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = p.alpha * (0.6 + Math.sin(timeSec * 5 + p.x) * 0.4);
+            ctx.fillStyle = morphProgress > 0.3 ? nextEra.particleColor : currentEra.particleColor;
+            ctx.globalAlpha = p.alpha * (0.6 + Math.sin(timeSec * 4 + p.x) * 0.4);
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
             ctx.fill();
         });
         ctx.globalAlpha = 1;
 
-        // 7. Atmospheric Vignette & Film Grain
-        const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.25, w / 2, h / 2, h * 0.72);
+        // 8. Subtle Atmospheric Vignette
+        const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.78);
         grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.65)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.55)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
 
-        // 8. Time Travel HUD Overlay Header
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.fillRect(40, 60, w - 80, 115);
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(40, 60, w - 80, 115);
+        // 9. CLEAN, MINIMAL FLOATING ERA BADGE AT VERY BOTTOM (NO BARS OR BANDS BLOCKING FACE/BODY)
+        const activeTheme = morphProgress > 0.5 ? nextEra : currentEra;
+        const pillW = 420;
+        const pillH = 64;
+        const pillX = (w - pillW) / 2;
+        const pillY = h - 110;
 
-        ctx.fillStyle = '#fbbf24';
-        ctx.font = 'bold 36px monospace';
+        // Frosted glass minimal pill
+        ctx.save();
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.75)';
+        ctx.strokeStyle = activeTheme.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(pillX, pillY, pillW, pillH, 32);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = activeTheme.color;
+        ctx.font = 'bold 26px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('⚡ VEO CHRONO VIDEO V4', w / 2, 115);
-        ctx.fillStyle = '#22d3ee';
-        ctx.font = 'bold 22px monospace';
-        ctx.fillText('CANLI KIYAFET HAREKETİ & MORF', w / 2, 150);
-
-        // 9. Lower Era Title Banner with Active Transformation Badge
-        if (currentItem) {
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-            ctx.fillRect(40, h - 240, w - 80, 140);
-            ctx.strokeStyle = isMorphing ? '#22d3ee' : 'rgba(251, 191, 36, 0.7)';
-            ctx.lineWidth = isMorphing ? 4 : 3;
-            ctx.strokeRect(40, h - 240, w - 80, 140);
-
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 44px sans-serif';
-            ctx.fillText(currentItem.title, w / 2, h - 170);
-
-            ctx.fillStyle = isMorphing ? '#22d3ee' : '#94a3b8';
-            ctx.font = 'bold 24px monospace';
-            const statusText = isMorphing
-                ? `⚡ ${nextItem ? nextItem.title.split('—')[0] : 'YENİ ÇAĞA'} DÖNÜŞÜYOR...`
-                : `KARE: ${slideIndex + 1} / ${activeItems.length} — DOĞAL HAREKET`;
-            ctx.fillText(statusText, w / 2, h - 125);
-        }
+        ctx.fillText(`${activeTheme.year} — ${activeTheme.title.split('—')[0]}`, w / 2, pillY + 42);
+        ctx.restore();
     };
 
-    // Live 60 FPS Render Loop
+    /**
+     * Draws procedural historical outfit layers, jewelry, embroidery, and cyberware on the person
+     */
+    function drawProceduralOutfit(
+        ctx: CanvasRenderingContext2D,
+        w: number,
+        h: number,
+        chestY: number,
+        timeSec: number,
+        era: EraTheme,
+        alpha: number
+    ) {
+        if (alpha <= 0.02) return;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, Math.max(0, alpha));
+
+        const centerX = w / 2;
+        const clothSway = Math.sin(timeSec * 4.0) * 6;
+
+        if (era.id === '1920s') {
+            // 1920s Great Gatsby: Swinging layered pearl necklaces & gold fringe
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 5;
+            ctx.shadowColor = '#fbbf24';
+            ctx.shadowBlur = 12;
+
+            // Pearl Strand 1
+            ctx.beginPath();
+            ctx.ellipse(centerX + clothSway * 0.5, chestY - 40, 140, 70, 0, 0, Math.PI);
+            ctx.stroke();
+
+            // Pearl Strand 2 (Longer swinging strand)
+            ctx.beginPath();
+            ctx.ellipse(centerX + clothSway, chestY + 20, 180, 120, 0, 0, Math.PI);
+            ctx.stroke();
+
+            // Art-Deco Gold Gemstone Brooch
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.arc(centerX + clothSway, chestY - 40, 14, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (era.id === 'ottoman') {
+            // 1550 Ottoman: Rich Gold-Embroidered Kaftan Collar & Royal Emerald Brooch
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 8;
+            ctx.shadowColor = '#10b981';
+            ctx.shadowBlur = 15;
+
+            // Ornate V-Neck Gold Kaftan Border
+            ctx.beginPath();
+            ctx.moveTo(centerX - 160, chestY - 120);
+            ctx.lineTo(centerX + clothSway * 0.3, chestY + 60);
+            ctx.lineTo(centerX + 160, chestY - 120);
+            ctx.stroke();
+
+            // Royal Emerald Center Medallion
+            ctx.fillStyle = '#10b981';
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(centerX + clothSway * 0.3, chestY + 60, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        } else if (era.id === 'wild_west') {
+            // 1885 Wild West: Leather Vest Trim & Silver Sheriff Star Badge
+            ctx.strokeStyle = '#92400e';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 170, chestY - 100);
+            ctx.lineTo(centerX - 90 + clothSway * 0.5, chestY + 120);
+            ctx.moveTo(centerX + 170, chestY - 100);
+            ctx.lineTo(centerX + 90 + clothSway * 0.5, chestY + 120);
+            ctx.stroke();
+
+            // 6-Pointed Silver Sheriff Star
+            ctx.fillStyle = '#e2e8f0';
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(centerX - 70 + clothSway * 0.5, chestY - 20, 16, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (era.id === 'egypt') {
+            // Ancient Egypt: Luminous Golden Broad Collar (Usekh)
+            ctx.lineWidth = 14;
+            ctx.strokeStyle = '#eab308';
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 16;
+            ctx.beginPath();
+            ctx.ellipse(centerX + clothSway * 0.3, chestY - 60, 170, 80, 0, 0, Math.PI);
+            ctx.stroke();
+
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = '#06b6d4';
+            ctx.beginPath();
+            ctx.ellipse(centerX + clothSway * 0.3, chestY - 40, 140, 60, 0, 0, Math.PI);
+            ctx.stroke();
+        } else if (era.id === 'cyberpunk') {
+            // 2077 Cyberpunk: Glowing Neon Circuit Lines & Cybernetic Collar
+            ctx.strokeStyle = '#ec4899';
+            ctx.lineWidth = 5;
+            ctx.shadowColor = '#ec4899';
+            ctx.shadowBlur = 20;
+
+            const pulse = (Math.sin(timeSec * 8) + 1) * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 180, chestY - 80);
+            ctx.lineTo(centerX - 80, chestY - 20);
+            ctx.lineTo(centerX - 80, chestY + 100);
+            ctx.moveTo(centerX + 180, chestY - 80);
+            ctx.lineTo(centerX + 80, chestY - 20);
+            ctx.lineTo(centerX + 80, chestY + 100);
+            ctx.stroke();
+
+            // Neon Cyan Collar Arc
+            ctx.strokeStyle = '#06b6d4';
+            ctx.shadowColor = '#06b6d4';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(centerX, chestY - 70, 110, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    function drawImageCover(
+        ctx: CanvasRenderingContext2D,
+        img: HTMLImageElement,
+        x: number,
+        y: number,
+        w: number,
+        h: number
+    ) {
+        let iw = img.naturalWidth || img.width;
+        let ih = img.naturalHeight || img.height;
+        if (!iw || !ih) return;
+
+        let r = Math.max(w / iw, h / ih);
+        let nw = iw * r;
+        let nh = ih * r;
+        let cx = (w - nw) / 2;
+        let cy = (h - nh) / 2;
+
+        ctx.drawImage(img, cx, cy, nw, nh);
+    }
+
+    // Live Animation Loop
     useEffect(() => {
-        if (activeItems.length === 0 || isRecording) return;
+        if (!loadedImage || isRecording) return;
 
         let startTime = performance.now();
-        const totalDuration = activeItems.length * speed;
+        const totalDuration = ERA_THEMES.length * speed;
 
         const render = (now: number) => {
             if (!isPlaying) {
@@ -313,12 +474,25 @@ export default function VideoStudioPage({
             const elapsed = (now - startTime) % totalDuration;
             setProgress(elapsed / totalDuration);
 
-            const slideIndex = Math.floor(elapsed / speed);
-            const nextIndex = (slideIndex + 1) % activeItems.length;
+            const slideIndex = Math.floor(elapsed / speed) % ERA_THEMES.length;
+            const nextIndex = (slideIndex + 1) % ERA_THEMES.length;
             const slideProgress = (elapsed % speed) / speed;
             const timeSec = now / 1000;
 
-            drawVideoFrame(ctx, canvas.width, canvas.height, slideIndex, nextIndex, slideProgress, timeSec);
+            setActiveEraIndex(slideIndex);
+
+            // Morph calculation
+            const morphRatio = slideProgress > 0.5 ? (slideProgress - 0.5) / 0.5 : 0;
+
+            renderLivingCharacterFrame(
+                ctx,
+                canvas.width,
+                canvas.height,
+                timeSec,
+                slideIndex,
+                nextIndex,
+                morphRatio
+            );
 
             animFrameRef.current = requestAnimationFrame(render);
         };
@@ -328,50 +502,9 @@ export default function VideoStudioPage({
         return () => {
             if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         };
-    }, [activeItems, loadedImgMap, isPlaying, speed, isRecording]);
+    }, [loadedImage, isPlaying, speed, isRecording]);
 
-    function drawImageProp(
-        ctx: CanvasRenderingContext2D,
-        img: HTMLImageElement,
-        x: number,
-        y: number,
-        w: number,
-        h: number,
-        offsetX: number = 0.5,
-        offsetY: number = 0.5
-    ) {
-        let iw = img.naturalWidth || img.width;
-        let ih = img.naturalHeight || img.height;
-        if (!iw || !ih) return;
-
-        let r = Math.min(w / iw, h / ih);
-        let nw = iw * r;
-        let nh = ih * r;
-        let cx = 1;
-        let cy = 1;
-        let cw = 1;
-        let ch = 1;
-        let ar = 1;
-
-        if (nw < w) ar = w / nw;
-        if (Math.abs(ar - 1) < 1e-14 && nh < h) ar = h / nh;
-        nw *= ar;
-        nh *= ar;
-
-        cw = iw / (nw / w);
-        ch = ih / (nh / h);
-        cx = (iw - cw) * offsetX;
-        cy = (ih - ch) * offsetY;
-
-        if (cx < 0) cx = 0;
-        if (cy < 0) cy = 0;
-        if (cw > iw) cw = iw;
-        if (ch > ih) ch = ih;
-
-        ctx.drawImage(img, cx, cy, cw, ch, x, y, w, h);
-    }
-
-    // High-Definition Video Export with 60 FPS Fluid Movement
+    // High-Definition Video Export (60 FPS Single Person Morph Video)
     const handleRecordAndDownload = async () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -401,7 +534,7 @@ export default function VideoStudioPage({
                 const url = URL.createObjectURL(finalBlob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `zaman-makinesi-veo-video-9x16.${extension}`;
+                a.download = `zaman-makinesi-canli-video-9x16.${extension}`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -413,7 +546,7 @@ export default function VideoStudioPage({
             mediaRecorder.start(100);
 
             const ctx = canvas.getContext('2d')!;
-            const totalDuration = activeItems.length * speed;
+            const totalDuration = ERA_THEMES.length * speed;
             const fps = 60;
             const totalFrames = Math.round((totalDuration / 1000) * fps);
             let currentFrame = 0;
@@ -424,12 +557,21 @@ export default function VideoStudioPage({
                 setRecordProgress(Math.min(99, Math.round(frameRatio * 100)));
 
                 const elapsed = (currentFrame / fps) * 1000;
-                const slideIndex = Math.floor(elapsed / speed) % activeItems.length;
-                const nextIndex = (slideIndex + 1) % activeItems.length;
+                const slideIndex = Math.floor(elapsed / speed) % ERA_THEMES.length;
+                const nextIndex = (slideIndex + 1) % ERA_THEMES.length;
                 const slideProgress = (elapsed % speed) / speed;
                 const timeSec = currentFrame / fps;
+                const morphRatio = slideProgress > 0.5 ? (slideProgress - 0.5) / 0.5 : 0;
 
-                drawVideoFrame(ctx, canvas.width, canvas.height, slideIndex, nextIndex, slideProgress, timeSec);
+                renderLivingCharacterFrame(
+                    ctx,
+                    canvas.width,
+                    canvas.height,
+                    timeSec,
+                    slideIndex,
+                    nextIndex,
+                    morphRatio
+                );
 
                 if (currentFrame >= totalFrames) {
                     clearInterval(recordInterval);
@@ -448,50 +590,6 @@ export default function VideoStudioPage({
         }
     };
 
-    // Google Veo 2 Direct AI API Call
-    const handleGenerateVeoAi = async () => {
-        const firstImg = activeItems[0]?.url || originalImage;
-        if (!firstImg) {
-            alert('Lütfen önce bir fotoğraf yükleyin.');
-            return;
-        }
-
-        playWarp();
-        setVeoLoading(true);
-
-        try {
-            const fromTitle = activeItems[0]?.title || '1860 Viktorya';
-            const toTitle = activeItems[1]?.title || '1920 Gatsby';
-
-            const response = await generateVeoVideo({
-                image: firstImg,
-                fromEraTitle: fromTitle,
-                toEraTitle: toTitle,
-                customMotionPrompt: veoPrompt,
-                aspectRatio: '9:16',
-                durationSeconds: 5
-            });
-
-            if (response.videoUrl) {
-                const link = document.createElement('a');
-                link.href = response.videoUrl;
-                link.download = 'zaman-makinesi-veo-2.mp4';
-                link.click();
-                playSuccess();
-                alert('Google Veo 2 Videosu başarıyla üretildi ve indirildi!');
-            } else {
-                // If API key is not configured, run the HD 60fps Chrono Mesh generator
-                playSuccess();
-                handleRecordAndDownload();
-            }
-        } catch (err) {
-            console.error('Veo generation error:', err);
-            handleRecordAndDownload();
-        } finally {
-            setVeoLoading(false);
-        }
-    };
-
     return (
         <div className="w-full max-w-7xl mx-auto px-4 py-8 flex flex-col space-y-8 animate-in fade-in duration-300">
             {/* Top Studio Header */}
@@ -503,33 +601,41 @@ export default function VideoStudioPage({
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                GOOGLE VEO — CANLI KIYAFET HAREKETİ & VİDEO DÖNÜŞÜMÜ
+                                TEK FOTOĞRAFTAN CANLI VİDEO & KIYAFET DÖNÜŞÜMÜ
                             </h2>
                             <span className="bg-gradient-to-r from-amber-400 to-cyan-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                                VEO LATEST (60 FPS)
+                                60 FPS VEO MOTION
                             </span>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Fotoğrafınızdaki kıyafetler rüzgarda doğal olarak dalgalanır; altın ışık dalgasıyla çağlar arası animasyonlu olarak dönüşür.
+                            Yüklediğiniz tek fotoğraf canlanır; nefes alır, rüzgarda kıyafetleri dalgalanır ve altın enerji dalgasıyla çağlar arası kıyafet değiştirir.
                         </p>
                     </div>
                 </div>
 
-                {!hasUserImages && (
+                {/* Upload / Switch Photo */}
+                <div className="flex items-center gap-3">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleCustomUpload}
+                        accept="image/*"
+                        className="hidden"
+                    />
                     <button
-                        onClick={onNavigateToCockpit}
-                        className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black text-xs shadow-md hover:brightness-110 active:scale-95 transition flex items-center gap-2 cursor-pointer"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs border border-slate-700 transition flex items-center gap-2 cursor-pointer"
                     >
                         <span>📸</span>
-                        <span>Kendi Fotoğrafınla Sıçrama Yap</span>
+                        <span>Farklı Fotoğraf Seç</span>
                     </button>
-                )}
+                </div>
             </div>
 
             {/* Studio Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* LEFT: 9:16 Vertical Video Screen */}
+                {/* LEFT: 9:16 Vertical Video Screen — CLEAN, FULL BLEED, NO BARS OVER FACE */}
                 <div className="lg:col-span-5 flex flex-col items-center">
                     <div className="relative w-full max-w-[340px] aspect-[9/16] rounded-3xl overflow-hidden border-4 border-slate-800 shadow-2xl bg-black">
                         <canvas
@@ -539,10 +645,10 @@ export default function VideoStudioPage({
                             className="w-full h-full object-cover"
                         />
 
-                        {/* Live Mode Badge */}
-                        <div className="absolute top-4 right-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-lg animate-pulse">
-                            <span className="w-2 h-2 rounded-full bg-white"></span>
-                            <span>{isRecording ? `RENDER %${recordProgress}` : 'VEO 60 FPS CANLI'}</span>
+                        {/* Minimal top status */}
+                        <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-white text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>{isRecording ? `KAYDEDİLİYOR %${recordProgress}` : '60 FPS CANLI'}</span>
                         </div>
 
                         {/* Bottom Floating Controls */}
@@ -567,125 +673,103 @@ export default function VideoStudioPage({
                                 disabled={isRecording}
                                 onClick={() => {
                                     playTick();
-                                    setSpeed(prev => (prev === 2400 ? 1500 : prev === 1500 ? 3600 : 2400));
+                                    setSpeed(prev => (prev === 3000 ? 1800 : prev === 1800 ? 4500 : 3000));
                                 }}
                                 className="px-2.5 py-1 rounded-lg bg-slate-800 text-[10px] font-mono font-bold text-amber-300 hover:bg-slate-700 transition cursor-pointer"
                             >
-                                {speed === 1500 ? '⚡ HIZLI' : speed === 3600 ? '🐌 SİNEMA' : '⏱ NORMAL'}
+                                {speed === 1800 ? '⚡ HIZLI' : speed === 4500 ? '🐌 SİNEMA' : '⏱ NORMAL'}
                             </button>
                         </div>
                     </div>
 
-                    {/* Big Action Buttons */}
-                    <div className="w-full max-w-[340px] flex flex-col gap-2.5 mt-4">
-                        <button
-                            disabled={isRecording || veoLoading}
-                            onClick={handleRecordAndDownload}
-                            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-sm shadow-xl shadow-cyan-500/25 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                        >
-                            <span>{isRecording ? '⏳' : '📥'}</span>
-                            <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : '9:16 Video Olarak İndir (60 FPS MP4)'}</span>
-                        </button>
-
-                        <button
-                            disabled={veoLoading || isRecording}
-                            onClick={handleGenerateVeoAi}
-                            className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 text-slate-950 font-black text-xs shadow-lg active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                        >
-                            <span>{veoLoading ? '⏳' : '🚀'}</span>
-                            <span>{veoLoading ? 'Google Veo İşliyor...' : 'Google Veo 2 ile AI Video Üret'}</span>
-                        </button>
-                    </div>
+                    {/* Big Action Download Button */}
+                    <button
+                        disabled={isRecording}
+                        onClick={handleRecordAndDownload}
+                        className="w-full max-w-[340px] mt-4 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-black text-sm shadow-xl shadow-cyan-500/25 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                        <span>{isRecording ? '⏳' : '📥'}</span>
+                        <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : 'Canlı Kıyafet Videosunu İndir (60 FPS)'}</span>
+                    </button>
                 </div>
 
-                {/* RIGHT: Motion Controls, Veo Prompts & Timeline */}
+                {/* RIGHT: Motion Controls & Era Sequence */}
                 <div className="lg:col-span-7 flex flex-col space-y-6">
-                    {/* Motion Engine Settings */}
+                    {/* Live Motion Physics Card */}
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-base font-black text-white flex items-center gap-2">
-                                <span>⚡</span> Kıyafet Hareketi & Animasyonlu Dönüşüm Ayarları
+                                <span>⚡</span> Canlı Karakter & Kıyafet Hareketi
                             </h3>
                             <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
-                                60 FPS AKTİF
+                                TEK FOTOĞRAF MOTORU
                             </span>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-300 mb-1">
-                                Veo Hareket & Morf Talimatı (Prompt):
-                            </label>
-                            <textarea
-                                rows={2}
-                                value={veoPrompt}
-                                onChange={(e) => setVeoPrompt(e.target.value)}
-                                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-sans"
-                            />
-                        </div>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                            Fotoğraf değiştirilmez. Yüklenen tek portre üzerinde doğal nefes alma, baş salınımı ve rüzgar fiziği çalıştırılır; kıyafetler animasyonlu enerji dalgasıyla dönüşür.
+                        </p>
 
-                        {/* Motion Highlights */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
-                            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-amber-400">🌊 Kumaş Dalgalanması</div>
-                                <p className="text-[11px] text-slate-400">Elbise, kaftan ve saçlar rüzgarda doğal salınır.</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                                <div className="font-bold text-cyan-400">🌊 Doğal Nefes & Salınım</div>
+                                <p className="text-[11px] text-slate-400">Gövde ve baş sürekli canlı hareket eder.</p>
                             </div>
-                            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-cyan-400">⚡ Altın Işık Taraması</div>
-                                <p className="text-[11px] text-slate-400">Kıyafetler vücutta ışık dalgasıyla dönüşür.</p>
+                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                                <div className="font-bold text-amber-400">⚡ Altın Kıyafet Dalgası</div>
+                                <p className="text-[11px] text-slate-400">Kıyafetler enerji çizgisiyle baştan ayağa değişir.</p>
                             </div>
-                            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-emerald-400">✨ 60 Parçacık Efekti</div>
-                                <p className="text-[11px] text-slate-400">Dönüşüm esnasında altın enerji kıvılcımları yayılır.</p>
+                            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                                <div className="font-bold text-emerald-400">💎 Dönemsel Takı & Detay</div>
+                                <p className="text-[11px] text-slate-400">Gatsby incileri, Osmanlı kaftanı, siber neonlar.</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Timeline Sequence */}
+                    {/* Active Era Transformation Sequence */}
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-base font-black text-white flex items-center gap-2">
-                                <span>🎞️</span> Videoya Dahil Edilecek Çağlar ({activeItems.length})
+                                <span>🎞️</span> Dönüşüm Sırası (Kıyafet Aşamaları)
                             </h3>
                             <span className="text-xs text-amber-400 font-mono font-bold">
-                                Tıklayarak Aç/Kapat
+                                6 Çağ
                             </span>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {allAvailableItems.map((item, idx) => {
-                                const isSelected = activeTimelineIds.includes(item.eraId);
+                            {ERA_THEMES.map((theme, idx) => {
+                                const isActive = activeEraIndex === idx;
                                 return (
                                     <div
-                                        key={item.eraId}
-                                        onClick={() => toggleItem(item.eraId)}
-                                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 select-none ${
-                                            isSelected
-                                                ? 'bg-amber-500/10 border-amber-500/50 shadow-md'
-                                                : 'bg-slate-950/60 border-slate-800 opacity-50 hover:opacity-80'
+                                        key={theme.id}
+                                        className={`p-3.5 rounded-2xl border transition-all flex items-center gap-3 select-none ${
+                                            isActive
+                                                ? 'bg-amber-500/15 border-amber-400 shadow-lg shadow-amber-500/10'
+                                                : 'bg-slate-950/60 border-slate-800 opacity-60'
                                         }`}
                                     >
-                                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-950 border border-slate-700 flex-shrink-0">
-                                            <img
-                                                src={item.url}
-                                                alt={item.title}
-                                                className="w-full h-full object-cover"
-                                            />
+                                        <div
+                                            className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-md"
+                                            style={{ backgroundColor: `${theme.color}25`, color: theme.color, border: `1px solid ${theme.color}` }}
+                                        >
+                                            {idx + 1}
                                         </div>
 
                                         <div className="flex-1 min-w-0">
                                             <div className="text-xs font-bold text-white truncate">
-                                                {item.title}
+                                                {theme.title}
                                             </div>
-                                            <div className="text-[10px] text-cyan-400 font-mono">
-                                                {idx === 0 ? 'Başlangıç' : `Dönüşüm #${idx}`}
+                                            <div className="text-[10px] font-mono text-slate-400">
+                                                {theme.year}
                                             </div>
                                         </div>
 
-                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${
-                                            isSelected ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-500'
-                                        }`}>
-                                            {isSelected ? '✓' : '+'}
-                                        </div>
+                                        {isActive && (
+                                            <span className="text-[9px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase animate-pulse">
+                                                CANLI
+                                            </span>
+                                        )}
                                     </div>
                                 );
                             })}
