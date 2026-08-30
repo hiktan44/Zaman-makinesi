@@ -91,10 +91,10 @@ export async function signUpWithEmail(email: string, password: string): Promise<
 export async function signInWithGoogle() {
     if (!isValidSupabase) {
         const mockUser = {
-            id: 'google_user_' + Date.now().toString(36),
-            email: 'gezgin@zamanmakinesi.app',
+            id: 'google_user_hikmet',
+            email: 'hikmet044@gmail.com',
             app_metadata: { provider: 'google' },
-            user_metadata: { name: 'Zaman Gezgini', full_name: 'Zaman Gezgini' },
+            user_metadata: { name: 'Hikmet (Admin)', full_name: 'Hikmet', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' },
             aud: 'authenticated',
             created_at: new Date().toISOString(),
         } as unknown as User;

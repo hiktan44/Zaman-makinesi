@@ -12,9 +12,10 @@ interface IntroPageProps {
     onStart: () => void;
     onOpenPricing?: () => void;
     onOpenAuth?: () => void;
+    onOpenAdmin?: () => void;
 }
 
-export default function IntroPage({ onStart, onOpenPricing, onOpenAuth }: IntroPageProps) {
+export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAdmin }: IntroPageProps) {
     const { t } = useT();
 
     // Interactive Before/After slider state
@@ -92,6 +93,7 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth }: IntroP
             <Header
                 onOpenPricing={onOpenPricing}
                 onOpenAuth={onOpenAuth}
+                onOpenAdmin={onOpenAdmin}
                 onToggleView={onStart}
                 viewMode="intro"
             />

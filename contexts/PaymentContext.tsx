@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 export interface CreditCosts {
     SINGLE_PHOTO: number;
@@ -23,6 +24,7 @@ interface PaymentContextType {
     isPremium: boolean;
     useCredit: (amount?: number) => boolean;
     addCredits: (amount: number) => void;
+    setCreditsExact: (amount: number) => void;
     setPremium: (value: boolean) => void;
     costs: CreditCosts;
 }
@@ -32,8 +34,11 @@ const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
 const STORAGE_KEY = 'zaman_makinesi_credits';
 const PREMIUM_KEY = 'zaman_makinesi_premium';
 const INITIAL_FREE_CREDITS = 5; // 5 Ücretsiz Başlangıç Kredisi
+const ADMIN_INITIAL_CREDITS = 1000; // 1000 Admin Kredisi
 
 export function PaymentProvider({ children }: { children: ReactNode }) {
+    const { isAdmin, user } = useAuth();
+
     const [credits, setCredits] = useState<number>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? parseInt(saved, 10) : INITIAL_FREE_CREDITS;
@@ -43,6 +48,14 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
         const saved = localStorage.getItem(PREMIUM_KEY);
         return saved === 'true';
     });
+
+    // If logged in as admin, ensure they have at least 1000 credits
+    useEffect(() => {
+        if (isAdmin && credits < 1000) {
+            setCredits(ADMIN_INITIAL_CREDITS);
+            localStorage.setItem(STORAGE_KEY, ADMIN_INITIAL_CREDITS.toString());
+        }
+    }, [isAdmin]);
 
     // Save to localStorage whenever credits change
     useEffect(() => {
@@ -56,7 +69,7 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
 
     const useCredit = (amount: number = 1): boolean => {
         if (isPremium) {
-            return true; // Premium users have unlimited credits
+            return true;
         }
 
         if (credits >= amount) {
@@ -71,12 +84,24 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
         setCredits(prev => prev + amount);
     };
 
+    const setCreditsExact = (amount: number) => {
+        setCredits(amount);
+    };
+
     const setPremium = (value: boolean) => {
         setIsPremium(value);
     };
 
     return (
-        <PaymentContext.Provider value={{ credits, isPremium, useCredit, addCredits, setPremium, costs: CREDIT_COSTS }}>
+        <PaymentContext.Provider value={{
+            credits,
+            isPremium,
+            useCredit,
+            addCredits,
+            setCreditsExact,
+            setPremium,
+            costs: CREDIT_COSTS
+        }}>
             {children}
         </PaymentContext.Provider>
     );

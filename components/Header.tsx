@@ -13,14 +13,21 @@ import { playTick } from '../lib/sfxUtils';
 interface HeaderProps {
     onOpenPricing?: () => void;
     onOpenAuth?: () => void;
+    onOpenAdmin?: () => void;
     onToggleView?: () => void;
     viewMode?: 'intro' | 'app';
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenPricing, onOpenAuth, onToggleView, viewMode }) => {
+const Header: React.FC<HeaderProps> = ({
+    onOpenPricing,
+    onOpenAuth,
+    onOpenAdmin,
+    onToggleView,
+    viewMode
+}) => {
     const { theme, toggleTheme } = useTheme();
     const { credits } = usePayment();
-    const { user, isAuthenticated, signOut } = useAuth();
+    const { user, isAuthenticated, isAdmin, signOut } = useAuth();
     const { t } = useT();
 
     return (
@@ -46,14 +53,25 @@ const Header: React.FC<HeaderProps> = ({ onOpenPricing, onOpenAuth, onToggleView
             </div>
 
             {/* Navigation & Actions */}
-            <nav className="flex items-center gap-3 md:gap-5">
+            <nav className="flex items-center gap-2.5 sm:gap-4">
                 {/* Intro / App Toggle */}
                 {onToggleView && (
                     <button
                         onClick={() => { playTick(); onToggleView(); }}
-                        className="hidden sm:inline text-xs font-bold text-slate-400 hover:text-amber-300 transition px-2 py-1"
+                        className="hidden sm:inline text-xs font-bold text-slate-400 hover:text-amber-300 transition px-2 py-1 cursor-pointer"
                     >
                         {viewMode === 'intro' ? '🚀 Kokpite Git' : '📖 Tanıtım'}
+                    </button>
+                )}
+
+                {/* Admin Button (Shows for Admin or when clicked) */}
+                {(isAdmin || user?.email === 'hikmet044@gmail.com') && onOpenAdmin && (
+                    <button
+                        onClick={() => { playTick(); onOpenAdmin(); }}
+                        className="flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-500/50 px-3 py-1.5 text-xs font-black text-amber-300 hover:bg-amber-500/30 transition cursor-pointer shadow-lg shadow-amber-500/10 animate-pulse"
+                    >
+                        <span>🛡️</span>
+                        <span>Admin Panel</span>
                     </button>
                 )}
 
@@ -76,9 +94,16 @@ const Header: React.FC<HeaderProps> = ({ onOpenPricing, onOpenAuth, onToggleView
                 {/* Auth Profile / Google Button */}
                 {isAuthenticated ? (
                     <div className="flex items-center gap-2">
-                        <span className="hidden sm:inline text-xs font-medium text-slate-300">
-                            {user?.email?.split('@')[0]}
-                        </span>
+                        <div className="hidden sm:flex flex-col items-end">
+                            <span className="text-xs font-bold text-white leading-tight">
+                                {user?.user_metadata?.name || user?.email?.split('@')[0]}
+                            </span>
+                            {isAdmin && (
+                                <span className="text-[9px] font-black text-amber-400 font-mono">
+                                    ADMIN
+                                </span>
+                            )}
+                        </div>
                         <button
                             onClick={() => signOut()}
                             className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl font-bold transition cursor-pointer"
@@ -106,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenPricing, onOpenAuth, onToggleView
                 {/* Theme Toggle */}
                 <button
                     onClick={toggleTheme}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-amber-400 transition"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-amber-400 transition cursor-pointer"
                     aria-label="Toggle theme"
                 >
                     {theme === 'dark' ? '☀️' : '🌙'}

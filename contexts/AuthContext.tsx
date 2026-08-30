@@ -5,12 +5,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured, logOut } from '../services/supabaseService';
+import { checkIsAdmin } from '../lib/adminStore';
 
 interface AuthContextType {
     user: User | null;
     session: Session | null;
     loading: boolean;
     isAuthenticated: boolean;
+    isAdmin: boolean;
     signOut: () => Promise<void>;
 }
 
@@ -65,11 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(null);
     };
 
+    const isAdmin = checkIsAdmin(user?.email);
+
     const value = {
         user,
         session,
         loading,
         isAuthenticated: !!user,
+        isAdmin,
         signOut,
     };
 

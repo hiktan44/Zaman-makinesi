@@ -11,15 +11,17 @@ import { usePayment } from './contexts/PaymentContext';
 import { useAuth } from './contexts/AuthContext';
 import PricingModal from './components/PricingModal';
 import AuthModal from './components/AuthModal';
+import AdminPanel from './components/AdminPanel';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import IntroPage from './components/IntroPage';
 import TimeCockpit from './components/TimeCockpit';
 import HistoricalNewspaper from './components/HistoricalNewspaper';
 import VideoMorphModal from './components/VideoMorphModal';
-import { ERAS, EraDefinition, ALL_ERA_IDS } from './constants/eraConstants';
+import { ERAS, ALL_ERA_IDS } from './constants/eraConstants';
 import { useT } from './lib/useT';
 import { playCameraShutter, playSuccess, playTick, playWarp } from './lib/sfxUtils';
+import { addAdminLog } from './lib/adminStore';
 
 type ImageStatus = 'pending' | 'done' | 'error';
 interface GeneratedImage {
@@ -48,10 +50,10 @@ function App() {
     const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImage>>({});
     const [selectedEraIds, setSelectedEraIds] = useState<string[]>([
         'ottoman_sultan',
+        '1920s',
         'ancient_rome',
         'viking_age',
-        'gatsby_1920',
-        'synthwave_1980',
+        '1980s',
         'cyberpunk_2077'
     ]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -64,6 +66,7 @@ function App() {
     const [view, setView] = useState<'intro' | 'app'>('app');
     const [showPricingModal, setShowPricingModal] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
+    const [showAdminPanel, setShowAdminPanel] = useState(false);
     const [showVideoMorphModal, setShowVideoMorphModal] = useState(false);
     const [newspaperModalData, setNewspaperModalData] = useState<{ isOpen: boolean; eraId: string; imageUrl: string }>({
         isOpen: false,
@@ -72,7 +75,7 @@ function App() {
     });
 
     const { credits, isPremium, useCredit, costs } = usePayment();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, isAdmin } = useAuth();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -128,10 +131,11 @@ function App() {
         const eraQueue = [...selectedEraIds];
 
         const processEra = async (eraId: string) => {
-            try {
-                const eraDef = ERAS.find(e => e.id === eraId);
-                const eraDisplay = eraDef ? eraDef.yearDisplay : eraId;
+            const startTime = Date.now();
+            const eraDef = ERAS.find(e => e.id === eraId);
+            const eraDisplay = eraDef ? eraDef.yearDisplay : eraId;
 
+            try {
                 const resultUrl = await generateDecadeImage(uploadedImage, eraId);
                 const timestampedUrl = await addTimestampToImage(resultUrl, eraDisplay);
 
@@ -144,12 +148,33 @@ function App() {
                     ...prev,
                     [eraId]: { status: 'done', url: timestampedUrl },
                 }));
+
+                // Record system log for admin
+                addAdminLog({
+                    userEmail: user?.email || 'anonim@zamanmakinesi.app',
+                    action: 'IMAGE_GENERATE',
+                    eraTitle: eraDef?.titleTr || eraId,
+                    creditsUsed: 1,
+                    latencyMs: Date.now() - startTime,
+                    status: 'SUCCESS',
+                    details: 'Kie.ai Seedance 5 — Portre Tamamlandı'
+                });
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : t('error.unknown');
                 setGeneratedImages(prev => ({
                     ...prev,
                     [eraId]: { status: 'error', error: errorMessage },
                 }));
+
+                addAdminLog({
+                    userEmail: user?.email || 'anonim@zamanmakinesi.app',
+                    action: 'IMAGE_GENERATE',
+                    eraTitle: eraDef?.titleTr || eraId,
+                    creditsUsed: 0,
+                    latencyMs: Date.now() - startTime,
+                    status: 'ERROR',
+                    details: errorMessage
+                });
             }
         };
 
@@ -193,6 +218,15 @@ function App() {
                 ...prev,
                 [eraId]: { status: 'done', url: timestampedUrl },
             }));
+
+            addAdminLog({
+                userEmail: user?.email || 'anonim@zamanmakinesi.app',
+                action: 'IMAGE_GENERATE',
+                eraTitle: eraDef?.titleTr || eraId,
+                creditsUsed: 1,
+                status: 'SUCCESS',
+                details: 'Yeniden Sıçrama (Regenerate)'
+            });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : t('error.unknown');
             setGeneratedImages(prev => ({
@@ -276,11 +310,26 @@ function App() {
 
     if (view === 'intro') {
         return (
-            <IntroPage
-                onStart={() => { playTick(); setView('app'); }}
-                onOpenPricing={() => setShowPricingModal(true)}
-                onOpenAuth={() => setShowAuthModal(true)}
-            />
+            <>
+                <IntroPage
+                    onStart={() => { playTick(); setView('app'); }}
+                    onOpenPricing={() => setShowPricingModal(true)}
+                    onOpenAuth={() => setShowAuthModal(true)}
+                    onOpenAdmin={() => setShowAdminPanel(true)}
+                />
+                <AdminPanel
+                    isOpen={showAdminPanel}
+                    onClose={() => setShowAdminPanel(false)}
+                />
+                <PricingModal
+                    isOpen={showPricingModal}
+                    onClose={() => setShowPricingModal(false)}
+                />
+                <AuthModal
+                    isOpen={showAuthModal}
+                    onClose={() => setShowAuthModal(false)}
+                />
+            </>
         );
     }
 
@@ -290,6 +339,7 @@ function App() {
             <Header
                 onOpenPricing={() => setShowPricingModal(true)}
                 onOpenAuth={() => setShowAuthModal(true)}
+                onOpenAdmin={() => setShowAdminPanel(true)}
                 onToggleView={() => setView('intro')}
                 viewMode="app"
             />
@@ -393,6 +443,12 @@ function App() {
 
             {/* Footer */}
             <Footer />
+
+            {/* Admin Panel Modal */}
+            <AdminPanel
+                isOpen={showAdminPanel}
+                onClose={() => setShowAdminPanel(false)}
+            />
 
             {/* Pricing Modal */}
             <PricingModal
