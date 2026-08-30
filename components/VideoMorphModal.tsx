@@ -13,6 +13,39 @@ interface VideoMorphModalProps {
     originalImage: string | null;
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+            console.warn('Image failed to load in Video Morph modal, fallback used:', src);
+            resolve(img);
+        };
+        img.src = src;
+    });
+}
+
+function getSupportedMimeType(): { mimeType: string; extension: string } {
+    if (typeof MediaRecorder === 'undefined') {
+        return { mimeType: '', extension: 'webm' };
+    }
+    const candidateTypes = [
+        { mimeType: 'video/webm;codecs=vp9', extension: 'webm' },
+        { mimeType: 'video/webm;codecs=vp8', extension: 'webm' },
+        { mimeType: 'video/webm', extension: 'webm' },
+        { mimeType: 'video/mp4;codecs=h264', extension: 'mp4' },
+        { mimeType: 'video/mp4', extension: 'mp4' }
+    ];
+
+    for (const candidate of candidateTypes) {
+        if (MediaRecorder.isTypeSupported(candidate.mimeType)) {
+            return candidate;
+        }
+    }
+    return { mimeType: '', extension: 'webm' };
+}
+
 export default function VideoMorphModal({
     isOpen,
     onClose,
@@ -21,12 +54,12 @@ export default function VideoMorphModal({
 }: VideoMorphModalProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
-    const [currentIndex, setCurrentIndex] = useState(0);
     const [progress, setProgress] = useState(0);
     const [isRecording, setIsRecording] = useState(false);
+    const [recordProgress, setRecordProgress] = useState(0);
+    const [loadedImgMap, setLoadedImgMap] = useState<Record<string, HTMLImageElement>>({});
     const animFrameRef = useRef<number | null>(null);
 
-    // Build timeline list: Original first, then generated era images
     const timelineItems = [
         ...(originalImage ? [{ eraId: 'present', title: '2026 GÜNÜMÜZ', url: originalImage }] : []),
         ...images.map(img => {
@@ -41,19 +74,98 @@ export default function VideoMorphModal({
 
     useEffect(() => {
         if (!isOpen || timelineItems.length === 0) return;
+        let isMounted = true;
+
+        Promise.all(
+            timelineItems.map(async (item) => {
+                const img = await loadImage(item.url);
+                return { eraId: item.eraId, img };
+            })
+        ).then(results => {
+            if (!isMounted) return;
+            const map: Record<string, HTMLImageElement> = {};
+            results.forEach(r => { map[r.eraId] = r.img; });
+            setLoadedImgMap(map);
+        });
+
+        return () => { isMounted = false; };
+    }, [isOpen, timelineItems.length]);
+
+    const speed = 2000;
+
+    const drawFrame = (
+        ctx: CanvasRenderingContext2D,
+        w: number,
+        h: number,
+        slideIndex: number,
+        nextIndex: number,
+        slideProgress: number
+    ) => {
+        const currentItem = timelineItems[slideIndex];
+        const nextItem = timelineItems[nextIndex];
+
+        const currentImg = currentItem ? loadedImgMap[currentItem.eraId] : null;
+        const nextImg = nextItem ? loadedImgMap[nextItem.eraId] : null;
+
+        ctx.fillStyle = '#030712';
+        ctx.fillRect(0, 0, w, h);
+
+        if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
+            ctx.globalAlpha = 1;
+            drawImageProp(ctx, currentImg, 0, 0, w, h, 0.5, 0.5);
+        }
+
+        const fadeStart = 0.65;
+        if (slideProgress > fadeStart && nextImg && nextImg.complete && nextImg.naturalWidth > 0) {
+            const alpha = (slideProgress - fadeStart) / (1 - fadeStart);
+            ctx.globalAlpha = Math.min(1, Math.max(0, alpha));
+            drawImageProp(ctx, nextImg, 0, 0, w, h, 0.5, 0.5);
+        }
+
+        ctx.globalAlpha = 1;
+
+        const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.25, w / 2, h / 2, h * 0.7);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.65)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+        ctx.fillRect(40, 60, w - 80, 110);
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(40, 60, w - 80, 110);
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 36px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚡ ZAMAN MAKİNESİ — TIMELAPSE', w / 2, 115);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '22px monospace';
+        ctx.fillText('9:16 VERTICAL REELS KLİP', w / 2, 150);
+
+        if (currentItem) {
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.fillRect(40, h - 230, w - 80, 130);
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(40, h - 230, w - 80, 130);
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 44px sans-serif';
+            ctx.fillText(currentItem.title, w / 2, h - 160);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '24px monospace';
+            ctx.fillText(`KARE: ${slideIndex + 1} / ${timelineItems.length}`, w / 2, h - 120);
+        }
+    };
+
+    useEffect(() => {
+        if (!isOpen || timelineItems.length === 0 || isRecording) return;
 
         let startTime = performance.now();
-        const durationPerSlide = 2200; // ms per era
-        const totalDuration = timelineItems.length * durationPerSlide;
-
-        // Preload image elements
-        const loadedImgs: HTMLImageElement[] = [];
-        timelineItems.forEach(item => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = item.url;
-            loadedImgs.push(img);
-        });
+        const totalDuration = timelineItems.length * speed;
 
         const render = (now: number) => {
             if (!isPlaying) {
@@ -61,77 +173,19 @@ export default function VideoMorphModal({
                 return;
             }
 
-            const elapsed = (now - startTime) % totalDuration;
-            const currentItemIdx = Math.floor(elapsed / durationPerSlide);
-            const nextItemIdx = (currentItemIdx + 1) % timelineItems.length;
-            const slideProgress = (elapsed % durationPerSlide) / durationPerSlide;
-
-            setCurrentIndex(currentItemIdx);
-            setProgress(Math.round((elapsed / totalDuration) * 100));
-
             const canvas = canvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    const width = canvas.width;
-                    const height = canvas.height;
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
 
-                    // Clear black
-                    ctx.fillStyle = '#050508';
-                    ctx.fillRect(0, 0, width, height);
+            const elapsed = (now - startTime) % totalDuration;
+            setProgress(elapsed / totalDuration);
 
-                    const currImg = loadedImgs[currentItemIdx];
-                    const nextImg = loadedImgs[nextItemIdx];
+            const slideIndex = Math.floor(elapsed / speed);
+            const nextIndex = (slideIndex + 1) % timelineItems.length;
+            const slideProgress = (elapsed % speed) / speed;
 
-                    // Draw Cross-fade transition
-                    if (currImg && currImg.complete) {
-                        ctx.globalAlpha = 1;
-                        drawImageProp(ctx, currImg, 0, 0, width, height);
-                    }
-
-                    // Smooth 30% fade transition at the end of each slide
-                    if (slideProgress > 0.7 && nextImg && nextImg.complete) {
-                        const fadeAlpha = (slideProgress - 0.7) / 0.3;
-                        ctx.globalAlpha = fadeAlpha;
-                        drawImageProp(ctx, nextImg, 0, 0, width, height);
-                    }
-
-                    ctx.globalAlpha = 1;
-
-                    // Draw Cinematic Vignette
-                    const grad = ctx.createRadialGradient(width / 2, height / 2, width / 3, width / 2, height / 2, height / 1.2);
-                    grad.addColorStop(0, 'rgba(0,0,0,0)');
-                    grad.addColorStop(1, 'rgba(0,0,0,0.7)');
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(0, 0, width, height);
-
-                    // Draw Retro Scanlines
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-                    for (let y = 0; y < height; y += 4) {
-                        ctx.fillRect(0, y, width, 1.5);
-                    }
-
-                    // Draw Bottom Title Badge
-                    const currentTitle = timelineItems[currentItemIdx]?.title || '';
-                    ctx.fillStyle = 'rgba(10, 10, 15, 0.85)';
-                    ctx.roundRect?.(24, height - 100, width - 48, 64, 16);
-                    ctx.fill();
-                    ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-
-                    // Text
-                    ctx.fillStyle = '#f59e0b';
-                    ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(currentTitle, width / 2, height - 60);
-
-                    // Watermark
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                    ctx.font = '11px monospace';
-                    ctx.fillText('ZAMAN MAKİNESİ AI // TIMELAPSE', width / 2, 32);
-                }
-            }
+            drawFrame(ctx, canvas.width, canvas.height, slideIndex, nextIndex, slideProgress);
 
             animFrameRef.current = requestAnimationFrame(render);
         };
@@ -141,128 +195,185 @@ export default function VideoMorphModal({
         return () => {
             if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         };
-    }, [isOpen, isPlaying, timelineItems.length]);
+    }, [isOpen, timelineItems, loadedImgMap, isPlaying, speed, isRecording]);
 
-    if (!isOpen) return null;
+    function drawImageProp(
+        ctx: CanvasRenderingContext2D,
+        img: HTMLImageElement,
+        x: number,
+        y: number,
+        w: number,
+        h: number,
+        offsetX: number = 0.5,
+        offsetY: number = 0.5
+    ) {
+        let iw = img.naturalWidth || img.width;
+        let ih = img.naturalHeight || img.height;
+        if (!iw || !ih) return;
 
-    // Helper to draw image proportional object-cover
-    function drawImageProp(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
-        const hRatio = w / img.width;
-        const vRatio = h / img.height;
-        const ratio = Math.max(hRatio, vRatio);
-        const centerShiftX = (w - img.width * ratio) / 2;
-        const centerShiftY = (h - img.height * ratio) / 2;
-        ctx.drawImage(img, 0, 0, img.width, img.height, x + centerShiftX, y + centerShiftY, img.width * ratio, img.height * ratio);
+        let r = Math.min(w / iw, h / ih);
+        let nw = iw * r;
+        let nh = ih * r;
+        let cx = 1;
+        let cy = 1;
+        let cw = 1;
+        let ch = 1;
+        let ar = 1;
+
+        if (nw < w) ar = w / nw;
+        if (Math.abs(ar - 1) < 1e-14 && nh < h) ar = h / nh;
+        nw *= ar;
+        nh *= ar;
+
+        cw = iw / (nw / w);
+        ch = ih / (nh / h);
+        cx = (iw - cw) * offsetX;
+        cy = (ih - ch) * offsetY;
+
+        if (cx < 0) cx = 0;
+        if (cy < 0) cy = 0;
+        if (cw > iw) cw = iw;
+        if (ch > ih) ch = ih;
+
+        ctx.drawImage(img, cx, cy, cw, ch, x, y, w, h);
     }
 
-    const handleRecordVideo = async () => {
+    const handleRecordAndDownload = async () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         playWarp();
         setIsRecording(true);
+        setRecordProgress(0);
 
         try {
+            const { mimeType, extension } = getSupportedMimeType();
             const stream = canvas.captureStream(30);
-            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+
+            const recorderOptions: MediaRecorderOptions = {
+                videoBitsPerSecond: 6000000
+            };
+            if (mimeType) recorderOptions.mimeType = mimeType;
+
+            const mediaRecorder = new MediaRecorder(stream, recorderOptions);
             const chunks: Blob[] = [];
 
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
+                if (e.data && e.data.size > 0) chunks.push(e.data);
             };
 
             mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
+                const finalBlob = new Blob(chunks, { type: mimeType || 'video/webm' });
+                const url = URL.createObjectURL(finalBlob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'zaman-yolculugu-timelapse.webm';
+                a.download = `zaman-makinesi-timelapse-9x16.${extension}`;
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
                 playSuccess();
                 setIsRecording(false);
+                setRecordProgress(100);
             };
 
-            mediaRecorder.start();
-            // Record full loop
-            setTimeout(() => {
-                mediaRecorder.stop();
-            }, timelineItems.length * 2200);
+            mediaRecorder.start(100);
+
+            const ctx = canvas.getContext('2d')!;
+            const totalDuration = timelineItems.length * speed;
+            const fps = 30;
+            const totalFrames = Math.round((totalDuration / 1000) * fps);
+            let currentFrame = 0;
+
+            const recordInterval = setInterval(() => {
+                currentFrame++;
+                const frameRatio = currentFrame / totalFrames;
+                setRecordProgress(Math.min(99, Math.round(frameRatio * 100)));
+
+                const elapsed = (currentFrame / fps) * 1000;
+                const slideIndex = Math.floor(elapsed / speed) % timelineItems.length;
+                const nextIndex = (slideIndex + 1) % timelineItems.length;
+                const slideProgress = (elapsed % speed) / speed;
+
+                drawFrame(ctx, canvas.width, canvas.height, slideIndex, nextIndex, slideProgress);
+
+                if (currentFrame >= totalFrames) {
+                    clearInterval(recordInterval);
+                    setTimeout(() => {
+                        if (mediaRecorder.state !== 'inactive') {
+                            mediaRecorder.stop();
+                        }
+                    }, 400);
+                }
+            }, 1000 / fps);
+
         } catch (err) {
             console.error('Video kayıt hatası:', err);
-            alert('Video kaydedilemedi.');
             setIsRecording(false);
+            alert('Tarayıcınızda video kaydı başlatılamadı.');
         }
     };
 
+    if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200">
-            <div className="relative w-full max-w-lg rounded-3xl bg-slate-900 border border-amber-500/40 p-6 shadow-2xl text-white my-4 flex flex-col items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-200">
+            <div className="relative w-full max-w-lg rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl p-6 flex flex-col items-center space-y-4">
+                
                 {/* Header */}
-                <div className="w-full flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <div className="w-full flex items-center justify-between border-b border-slate-800 pb-3">
                     <div className="flex items-center gap-2">
                         <span className="text-xl">🎬</span>
-                        <h3 className="text-base font-black text-white">Zaman Tüneli Klip (9:16 Reels / TikTok)</h3>
+                        <h3 className="font-black text-white text-base">
+                            9:16 ZAMAN TÜNELİ KLİBİ (REELS)
+                        </h3>
                     </div>
                     <button
                         onClick={() => { playTick(); onClose(); }}
-                        className="rounded-full bg-slate-800 p-1.5 text-slate-400 hover:text-white"
+                        className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-sm transition cursor-pointer"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        ✕
                     </button>
                 </div>
 
-                {/* 9:16 Canvas Container */}
-                <div className="relative rounded-2xl overflow-hidden border-2 border-amber-400/80 shadow-2xl bg-black">
+                {/* 9:16 Canvas Screen */}
+                <div className="relative w-full max-w-[280px] aspect-[9/16] rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl bg-black">
                     <canvas
                         ref={canvasRef}
-                        width={450}
-                        height={750}
-                        className="w-[270px] sm:w-[320px] h-auto aspect-[9/16] object-cover"
+                        width={1080}
+                        height={1920}
+                        className="w-full h-full object-cover"
                     />
 
-                    {/* Recording Indicator */}
-                    {isRecording && (
-                        <div className="absolute top-4 right-4 flex items-center gap-2 bg-red-600/90 text-white text-xs font-black px-3 py-1 rounded-full animate-pulse shadow-lg">
-                            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                            KAYDEDİLİYOR...
+                    <div className="absolute top-3 right-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                        {isRecording ? `%${recordProgress}` : 'CANLI'}
+                    </div>
+
+                    <div className="absolute bottom-3 inset-x-3 flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-800">
+                        <button
+                            disabled={isRecording}
+                            onClick={() => { playTick(); setIsPlaying(!isPlaying); }}
+                            className="w-7 h-7 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs hover:bg-amber-300 transition cursor-pointer"
+                        >
+                            {isPlaying ? '⏸' : '▶'}
+                        </button>
+                        <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                            <div
+                                className="h-full bg-amber-400"
+                                style={{ width: `${(isRecording ? recordProgress / 100 : progress) * 100}%` }}
+                            />
                         </div>
-                    )}
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full max-w-xs mt-4">
-                    <div className="flex justify-between text-[11px] font-mono text-slate-400 mb-1">
-                        <span>Dönüşüm İlerlemesi</span>
-                        <span className="text-amber-400 font-bold">{progress}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-amber-400 to-yellow-500 transition-all duration-100"
-                            style={{ width: `${progress}%` }}
-                        />
                     </div>
                 </div>
 
-                {/* Controls */}
-                <div className="flex items-center justify-center gap-3 mt-5 w-full">
-                    <button
-                        onClick={() => setIsPlaying(!isPlaying)}
-                        className="p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold transition text-sm flex items-center gap-2"
-                    >
-                        <span>{isPlaying ? '⏸️ Durdur' : '▶️ Oynat'}</span>
-                    </button>
-
-                    <button
-                        disabled={isRecording}
-                        onClick={handleRecordVideo}
-                        className="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20 hover:brightness-110 active:scale-95 transition flex items-center gap-2"
-                    >
-                        <span>🎥</span>
-                        <span>{isRecording ? 'Klip Oluşturuluyor...' : 'Videoyu İndir (.webm)'}</span>
-                    </button>
-                </div>
+                {/* Download Action */}
+                <button
+                    disabled={isRecording}
+                    onClick={handleRecordAndDownload}
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black text-xs shadow-xl active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                    <span>{isRecording ? '⏳' : '📥'}</span>
+                    <span>{isRecording ? `Video Kaydediliyor (%${recordProgress})...` : '9:16 Video Olarak İndir (Reels / TikTok)'}</span>
+                </button>
             </div>
         </div>
     );
