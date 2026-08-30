@@ -2,19 +2,47 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { createClient, User } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 
 // Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const rawUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
-// Initialize Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const isValidSupabase = !!rawUrl && rawUrl.startsWith('http') && !!rawKey;
+
+const supabaseUrl = isValidSupabase ? rawUrl : 'https://placeholder-zaman-makinesi.supabase.co';
+const supabaseAnonKey = isValidSupabase ? rawKey : 'placeholder-anon-key';
+
+// Safely initialize Supabase without throwing errors
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+    }
+});
+
+export const isSupabaseConfigured = isValidSupabase;
 
 /**
  * Sign in with email and password
  */
 export async function signInWithEmail(email: string, password: string): Promise<{ user: User | null; error: Error | null }> {
+    if (!isValidSupabase) {
+        // Fallback local mock authentication
+        const mockUser = {
+            id: 'mock_user_' + Date.now().toString(36),
+            email: email,
+            app_metadata: {},
+            user_metadata: { name: email.split('@')[0] },
+            aud: 'authenticated',
+            created_at: new Date().toISOString(),
+        } as unknown as User;
+        localStorage.setItem('zm_local_user', JSON.stringify(mockUser));
+        window.dispatchEvent(new CustomEvent('zm_auth_changed', { detail: mockUser }));
+        return { user: mockUser, error: null };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -31,6 +59,20 @@ export async function signInWithEmail(email: string, password: string): Promise<
  * Create new account with email and password
  */
 export async function signUpWithEmail(email: string, password: string): Promise<{ user: User | null; error: Error | null }> {
+    if (!isValidSupabase) {
+        const mockUser = {
+            id: 'mock_user_' + Date.now().toString(36),
+            email: email,
+            app_metadata: {},
+            user_metadata: { name: email.split('@')[0] },
+            aud: 'authenticated',
+            created_at: new Date().toISOString(),
+        } as unknown as User;
+        localStorage.setItem('zm_local_user', JSON.stringify(mockUser));
+        window.dispatchEvent(new CustomEvent('zm_auth_changed', { detail: mockUser }));
+        return { user: mockUser, error: null };
+    }
+
     const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -45,51 +87,60 @@ export async function signUpWithEmail(email: string, password: string): Promise<
 
 /**
  * Sign in with Google
- * Note: Requires Google Provider to be enabled in Supabase Dashboard
- * and valid redirect URL configuration.
  */
 export async function signInWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    if (!isValidSupabase) {
+        const mockUser = {
+            id: 'google_user_' + Date.now().toString(36),
+            email: 'gezgin@zamanmakinesi.app',
+            app_metadata: { provider: 'google' },
+            user_metadata: { name: 'Zaman Gezgini', full_name: 'Zaman Gezgini' },
+            aud: 'authenticated',
+            created_at: new Date().toISOString(),
+        } as unknown as User;
+        localStorage.setItem('zm_local_user', JSON.stringify(mockUser));
+        window.dispatchEvent(new CustomEvent('zm_auth_changed', { detail: mockUser }));
+        return;
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin, // Redirect back to the app after login
+            redirectTo: window.location.origin,
         }
     });
 
     if (error) {
         throw new Error(translateAuthError(error.message));
     }
-
-    return data;
 }
 
 /**
  * Sign out current user
  */
 export async function logOut(): Promise<void> {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        throw new Error('Çıkış yapılırken bir hata oluştu.');
+    localStorage.removeItem('zm_local_user');
+    window.dispatchEvent(new CustomEvent('zm_auth_changed', { detail: null }));
+    if (isValidSupabase) {
+        await supabase.auth.signOut();
     }
 }
 
 /**
- * Get current session
- */
-export async function getSession() {
-    const { data, error } = await supabase.auth.getSession();
-    return { session: data.session, error };
-}
-
-/**
- * Translate Supabase auth errors to Turkish
+ * Translate Supabase error messages to Turkish
  */
 function translateAuthError(message: string): string {
-    if (message.includes('Invalid login credentials')) return 'Hatalı e-posta veya şifre.';
-    if (message.includes('User already registered')) return 'Bu e-posta adresi zaten kayıtlı.';
-    if (message.includes('Email not confirmed')) return 'Lütfen e-posta adresinizi doğrulayın.';
-    if (message.includes('Password should be')) return 'Şifre en az 6 karakter olmalı.';
-    if (message.includes('Database error')) return 'Veritabanı hatası oluştu.';
-
-    return 'Bir hata oluştu: ' + message;
+    if (message.includes('Invalid login credentials')) {
+        return 'E-posta adresi veya şifre hatalı.';
+    }
+    if (message.includes('User already registered')) {
+        return 'Bu e-posta adresi ile zaten bir hesap mevcut.';
+    }
+    if (message.includes('Password should be at least')) {
+        return 'Şifre en az 6 karakter olmalıdır.';
+    }
+    if (message.includes('rate limit')) {
+        return 'Çok fazla istek gönderildi. Lütfen birkaç dakika sonra tekrar deneyin.';
+    }
+    return message;
 }

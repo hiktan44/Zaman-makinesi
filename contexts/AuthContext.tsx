@@ -4,31 +4,52 @@
  */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../services/supabaseService';
+import { supabase, isSupabaseConfigured, logOut } from '../services/supabaseService';
 
 interface AuthContextType {
     user: User | null;
     session: Session | null;
     loading: boolean;
     isAuthenticated: boolean;
+    signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<User | null>(() => {
+        try {
+            const saved = localStorage.getItem('zm_local_user');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    });
     const [session, setSession] = useState<Session | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        // Initial session check
+        if (!isSupabaseConfigured) {
+            // Local storage auth listener
+            const handleLocalAuth = (e: CustomEvent) => {
+                setUser(e.detail);
+            };
+            window.addEventListener('zm_auth_changed', handleLocalAuth as EventListener);
+            return () => {
+                window.removeEventListener('zm_auth_changed', handleLocalAuth as EventListener);
+            };
+        }
+
+        // Supabase session check
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
-            setUser(session?.user ?? null);
+            if (session?.user) {
+                setUser(session.user);
+            }
             setLoading(false);
-        });
+        }).catch(() => setLoading(false));
 
-        // Listen for auth changes
+        // Listen for Supabase auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
@@ -38,16 +59,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => subscription.unsubscribe();
     }, []);
 
+    const signOut = async () => {
+        await logOut();
+        setUser(null);
+        setSession(null);
+    };
+
     const value = {
         user,
         session,
         loading,
         isAuthenticated: !!user,
+        signOut,
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 }
