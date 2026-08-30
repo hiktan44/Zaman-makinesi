@@ -15,6 +15,7 @@ import {
 } from '../lib/adminStore';
 import { useAuth } from '../contexts/AuthContext';
 import { usePayment } from '../contexts/PaymentContext';
+import { getCustomApiKeys, saveCustomApiKeys } from '../services/geminiService';
 import { playTick, playSuccess, playWarp } from '../lib/sfxUtils';
 
 interface AdminPanelProps {
@@ -34,6 +35,10 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     const [logFilter, setLogFilter] = useState<string>('ALL');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+    // API Keys state
+    const [geminiKeyInput, setGeminiKeyInput] = useState<string>('');
+    const [kieKeyInput, setKieKeyInput] = useState<string>('');
+
     const showToast = (msg: string) => {
         setToastMessage(msg);
         setTimeout(() => setToastMessage(null), 3000);
@@ -44,6 +49,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
             setUsersList(getAdminUsers());
             setPurchasesList(getAdminPurchases());
             setLogsList(getAdminLogs());
+            const keys = getCustomApiKeys();
+            setGeminiKeyInput(keys.geminiKey);
+            setKieKeyInput(keys.kieKey);
         }
     }, [isOpen]);
 
@@ -53,7 +61,6 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     const handleAddAdminCredits = (amount: number = 1000) => {
         playWarp();
         addCredits(amount);
-        // Also update in users list if present
         if (user?.email) {
             updateUserCredits(user.email, credits + amount);
             setUsersList(getAdminUsers());
@@ -74,6 +81,12 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         setUsersList(updated);
         saveAdminUsers(updated);
         showToast(`${email} kullanıcısına ${delta > 0 ? '+' : ''}${delta} kredi güncellendi.`);
+    };
+
+    const handleSaveApiKeys = () => {
+        playSuccess();
+        saveCustomApiKeys(geminiKeyInput, kieKeyInput);
+        showToast('API Anahtarları başarıyla kaydedildi!');
     };
 
     // Filtered users
@@ -201,7 +214,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         }`}
                     >
                         <span>⚙️</span>
-                        <span>Model & AI Ayarları</span>
+                        <span>API & Model Ayarları</span>
                     </button>
                 </div>
 
@@ -284,7 +297,6 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                     {/* TAB 2: USERS DIRECTORY */}
                     {activeTab === 'users' && (
                         <div className="space-y-4">
-                            {/* Search & Actions Bar */}
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <input
                                     type="text"
@@ -298,7 +310,6 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 </div>
                             </div>
 
-                            {/* Users Table */}
                             <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
                                 <table className="w-full text-left text-xs">
                                     <thead>
@@ -416,7 +427,6 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                     {/* TAB 4: SYSTEM & GENERATION LOGS */}
                     {activeTab === 'logs' && (
                         <div className="space-y-4">
-                            {/* Log Filter Pills */}
                             <div className="flex items-center gap-2 overflow-x-auto pb-1">
                                 {['ALL', 'IMAGE_GENERATE', 'VIDEO_MORPH', 'NEWSPAPER_EXPORT', 'CREDIT_PURCHASE'].map((type) => (
                                     <button
@@ -433,7 +443,6 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 ))}
                             </div>
 
-                            {/* Logs Table */}
                             <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
                                 <table className="w-full text-left text-xs font-mono">
                                     <thead>
@@ -471,35 +480,56 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         </div>
                     )}
 
-                    {/* TAB 5: SETTINGS & MODEL ROUTER */}
+                    {/* TAB 5: SETTINGS & API KEYS */}
                     {activeTab === 'settings' && (
                         <div className="space-y-6 max-w-2xl">
+                            {/* API Keys Configuration Box */}
                             <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-4">
                                 <h3 className="text-sm font-black text-white flex items-center gap-2">
-                                    <span>🤖</span> Yapay Zeka Model Sağlayıcısı
+                                    <span>🔑</span> Özel API Anahtarları (Admin Canlı Yapılandırma)
                                 </h3>
                                 <p className="text-xs text-slate-400">
-                                    Görsel ve video üretimleri için kullanılan AI motorunu seçin.
+                                    Sunucu ortam değişkenlerini değiştirmeden tarayıcınızdan doğrudan kendi API anahtarınızı tanımlayabilirsiniz.
                                 </p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="p-4 rounded-xl bg-amber-500/10 border-2 border-amber-400 flex flex-col space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-black text-amber-300">Kie.ai Seedance 5</span>
-                                            <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded">AKTİF</span>
-                                        </div>
-                                        <p className="text-[11px] text-slate-300">10:1 Düşük Maliyet, Hızlı Yanıt ve Yüksek Yüz Benzerliği</p>
+
+                                <div className="space-y-3 pt-2">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                                            Kie.ai API Key (Seedance 5 — 10:1 Maliyet Avantajı)
+                                        </label>
+                                        <input
+                                            type="password"
+                                            placeholder="kie_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                            value={kieKeyInput}
+                                            onChange={(e) => setKieKeyInput(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-amber-300 focus:outline-none focus:border-amber-400"
+                                        />
                                     </div>
 
-                                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col space-y-2 opacity-75">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-slate-300">Google Gemini 2.5 Flash</span>
-                                            <span className="text-[10px] text-slate-500 font-mono">Yedek</span>
-                                        </div>
-                                        <p className="text-[11px] text-slate-400">Doğrudan Google API Router (Failover / Geri Çekilme)</p>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                                            Google Gemini API Key (Gemini 2.0 Flash / Imagen)
+                                        </label>
+                                        <input
+                                            type="password"
+                                            placeholder="AIzaSyxxxxxxxxxxxxxxxxxxxxxxxx"
+                                            value={geminiKeyInput}
+                                            onChange={(e) => setGeminiKeyInput(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-amber-300 focus:outline-none focus:border-amber-400"
+                                        />
                                     </div>
+
+                                    <button
+                                        onClick={handleSaveApiKeys}
+                                        className="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
+                                    >
+                                        <span>💾</span>
+                                        <span>API Anahtarlarını Kaydet</span>
+                                    </button>
                                 </div>
                             </div>
 
+                            {/* Credit Rates */}
                             <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-4">
                                 <h3 className="text-sm font-black text-white flex items-center gap-2">
                                     <span>⚡</span> Kredi & Harcama Maliyetleri
