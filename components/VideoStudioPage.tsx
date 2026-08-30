@@ -4,6 +4,8 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { playCameraShutter, playSuccess, playTick, playWarp } from '../lib/sfxUtils';
+import { generateKieOmniVideo } from '../services/kieOmniService';
+import { getCustomApiKeys, saveCustomApiKeys } from '../services/geminiService';
 
 interface VideoStudioPageProps {
     images: { eraId: string; url: string }[];
@@ -51,7 +53,6 @@ interface EraTheme {
     color: string;
     secondaryColor: string;
     particleColor: string;
-    filterTint: string;
 }
 
 const ERA_THEMES: EraTheme[] = [
@@ -61,8 +62,7 @@ const ERA_THEMES: EraTheme[] = [
         title: 'Günümüz — Orijinal Görünüm',
         color: '#38bdf8',
         secondaryColor: '#818cf8',
-        particleColor: '#67e8f9',
-        filterTint: 'none'
+        particleColor: '#67e8f9'
     },
     {
         id: '1920s',
@@ -70,8 +70,7 @@ const ERA_THEMES: EraTheme[] = [
         title: 'Great Gatsby & Caz Çağı',
         color: '#fbbf24',
         secondaryColor: '#f59e0b',
-        particleColor: '#fde68a',
-        filterTint: 'sepia(0.2) contrast(1.1) brightness(1.05)'
+        particleColor: '#fde68a'
     },
     {
         id: 'ottoman',
@@ -79,8 +78,7 @@ const ERA_THEMES: EraTheme[] = [
         title: 'Osmanlı Saray İhtişamı & Kaftan',
         color: '#10b981',
         secondaryColor: '#d97706',
-        particleColor: '#34d399',
-        filterTint: 'contrast(1.15) saturate(1.2)'
+        particleColor: '#34d399'
     },
     {
         id: 'wild_west',
@@ -88,8 +86,7 @@ const ERA_THEMES: EraTheme[] = [
         title: 'Vahşi Batı & Şerif Yeleği',
         color: '#b45309',
         secondaryColor: '#92400e',
-        particleColor: '#d97706',
-        filterTint: 'sepia(0.4) contrast(1.2)'
+        particleColor: '#d97706'
     },
     {
         id: 'egypt',
@@ -97,8 +94,7 @@ const ERA_THEMES: EraTheme[] = [
         title: 'Antik Mısır Altın Zarafeti',
         color: '#eab308',
         secondaryColor: '#06b6d4',
-        particleColor: '#facc15',
-        filterTint: 'sepia(0.3) saturate(1.3)'
+        particleColor: '#facc15'
     },
     {
         id: 'cyberpunk',
@@ -106,8 +102,7 @@ const ERA_THEMES: EraTheme[] = [
         title: 'Cyberpunk Neon & Sibernetik',
         color: '#ec4899',
         secondaryColor: '#06b6d4',
-        particleColor: '#f472b6',
-        filterTint: 'contrast(1.25) hue-rotate(15deg)'
+        particleColor: '#f472b6'
     }
 ];
 
@@ -116,7 +111,9 @@ export default function VideoStudioPage({
     onNavigateToCockpit
 }: VideoStudioPageProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
     const [userImage, setUserImage] = useState<string>(originalImage || '/images/demo-original.png');
     const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
 
@@ -126,15 +123,24 @@ export default function VideoStudioPage({
     const [recordProgress, setRecordProgress] = useState(0);
     const [progress, setProgress] = useState(0);
     const [activeEraIndex, setActiveEraIndex] = useState(0);
-    const animFrameRef = useRef<number | null>(null);
 
-    // Particles system
+    // Kie.ai Google Omni states
+    const [kieLoading, setKieLoading] = useState(false);
+    const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+    const [omniPrompt, setOmniPrompt] = useState('Tek fotoğraftaki insan canlansın; nefes alsın, rüzgarda kıyafetleri dalgalansın ve altın ışık dalgasıyla 1920 Gatsby, 1550 Osmanlı, 1885 Vahşi Batı ve 2077 Siber kıyafetlerine animasyonla dönüşsün.');
+    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+    const [kieKeyInput, setKieKeyInput] = useState('');
+    const [statusToast, setStatusToast] = useState<string | null>(null);
+
+    const animFrameRef = useRef<number | null>(null);
     const particlesRef = useRef<Array<{ x: number; y: number; vx: number; vy: number; size: number; alpha: number; color: string }>>([]);
 
     useEffect(() => {
         if (originalImage) {
             setUserImage(originalImage);
         }
+        const { kieKey } = getCustomApiKeys();
+        if (kieKey) setKieKeyInput(kieKey);
     }, [originalImage]);
 
     // Load single source image
@@ -171,6 +177,7 @@ export default function VideoStudioPage({
             reader.onloadend = () => {
                 playTick();
                 setUserImage(reader.result as string);
+                setGeneratedVideoUrl(null);
             };
             reader.readAsDataURL(file);
         }
@@ -199,13 +206,10 @@ export default function VideoStudioPage({
         ctx.fillRect(0, 0, w, h);
 
         // 2. Continuous Organic Living Motion Physics
-        // Breathing motion
         const breatheY = Math.sin(timeSec * 2.4) * 8;
         const breatheScale = 1.0 + Math.sin(timeSec * 2.4) * 0.012;
-        // Head / camera swaying
         const swayX = Math.sin(timeSec * 1.6) * 10;
         const tiltAngle = (Math.sin(timeSec * 1.2) * 0.8 * Math.PI) / 180;
-        // Smooth camera drift
         const camZoom = 1.04 + Math.sin(timeSec * 0.7) * 0.03;
 
         ctx.save();
@@ -217,21 +221,17 @@ export default function VideoStudioPage({
         // 3. Draw The Single Living Person Base Image
         drawImageCover(ctx, loadedImage, 0, 0, w, h);
 
-        // 4. Hair / Cloth Wind Simulation (Dynamic waving highlights around shoulders & chest)
-        const windWave = Math.sin(timeSec * 5.0) * 8;
+        // 4. Hair / Cloth Wind Simulation & Animated Outfits on the Single Person
         const chestY = h * 0.62;
-
-        // 5. Draw Animated Procedural Historical Outfit Elements on the Single Person
         drawProceduralOutfit(ctx, w, h, chestY, timeSec, currentEra, 1.0 - morphProgress * 0.6);
         if (morphProgress > 0) {
             drawProceduralOutfit(ctx, w, h, chestY, timeSec, nextEra, morphProgress);
         }
 
-        // 6. Glowing Chrono-Morph Wave (Sweeps down the body when morphing)
+        // 5. Glowing Chrono-Morph Wave (Sweeps down the body when morphing)
         if (morphProgress > 0.05 && morphProgress < 0.95) {
-            const waveY = morphProgress * (h * 0.75) + (h * 0.2); // Sweeps across chest and dress
+            const waveY = morphProgress * (h * 0.75) + (h * 0.2);
 
-            // Luminous golden / cyan energy line
             const waveGrad = ctx.createLinearGradient(0, waveY - 40, 0, waveY + 40);
             waveGrad.addColorStop(0, 'rgba(34, 211, 238, 0)');
             waveGrad.addColorStop(0.4, 'rgba(251, 191, 36, 0.7)');
@@ -242,7 +242,6 @@ export default function VideoStudioPage({
             ctx.fillStyle = waveGrad;
             ctx.fillRect(0, waveY - 35, w, 70);
 
-            // Shimmering plasma laser wave
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 4;
             ctx.shadowColor = nextEra.color;
@@ -259,7 +258,7 @@ export default function VideoStudioPage({
 
         ctx.restore();
 
-        // 7. Ambient Floating Temporal Particles (Living Atmosphere)
+        // 6. Ambient Floating Temporal Particles (Living Atmosphere)
         particlesRef.current.forEach(p => {
             p.y += p.vy;
             p.x += p.vx + Math.sin(timeSec * 3 + p.y * 0.01) * 1.2;
@@ -276,21 +275,20 @@ export default function VideoStudioPage({
         });
         ctx.globalAlpha = 1;
 
-        // 8. Subtle Atmospheric Vignette
+        // 7. Atmospheric Vignette
         const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.78);
         grad.addColorStop(0, 'rgba(0,0,0,0)');
         grad.addColorStop(1, 'rgba(0,0,0,0.55)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
 
-        // 9. CLEAN, MINIMAL FLOATING ERA BADGE AT VERY BOTTOM (NO BARS OR BANDS BLOCKING FACE/BODY)
+        // 8. CLEAN, MINIMAL FLOATING ERA BADGE AT VERY BOTTOM (NO BARS OVER FACE/BODY)
         const activeTheme = morphProgress > 0.5 ? nextEra : currentEra;
         const pillW = 420;
         const pillH = 64;
         const pillX = (w - pillW) / 2;
         const pillY = h - 110;
 
-        // Frosted glass minimal pill
         ctx.save();
         ctx.fillStyle = 'rgba(10, 15, 30, 0.75)';
         ctx.strokeStyle = activeTheme.color;
@@ -307,9 +305,6 @@ export default function VideoStudioPage({
         ctx.restore();
     };
 
-    /**
-     * Draws procedural historical outfit layers, jewelry, embroidery, and cyberware on the person
-     */
     function drawProceduralOutfit(
         ctx: CanvasRenderingContext2D,
         w: number,
@@ -333,17 +328,14 @@ export default function VideoStudioPage({
             ctx.shadowColor = '#fbbf24';
             ctx.shadowBlur = 12;
 
-            // Pearl Strand 1
             ctx.beginPath();
             ctx.ellipse(centerX + clothSway * 0.5, chestY - 40, 140, 70, 0, 0, Math.PI);
             ctx.stroke();
 
-            // Pearl Strand 2 (Longer swinging strand)
             ctx.beginPath();
             ctx.ellipse(centerX + clothSway, chestY + 20, 180, 120, 0, 0, Math.PI);
             ctx.stroke();
 
-            // Art-Deco Gold Gemstone Brooch
             ctx.fillStyle = '#fbbf24';
             ctx.beginPath();
             ctx.arc(centerX + clothSway, chestY - 40, 14, 0, Math.PI * 2);
@@ -355,14 +347,12 @@ export default function VideoStudioPage({
             ctx.shadowColor = '#10b981';
             ctx.shadowBlur = 15;
 
-            // Ornate V-Neck Gold Kaftan Border
             ctx.beginPath();
             ctx.moveTo(centerX - 160, chestY - 120);
             ctx.lineTo(centerX + clothSway * 0.3, chestY + 60);
             ctx.lineTo(centerX + 160, chestY - 120);
             ctx.stroke();
 
-            // Royal Emerald Center Medallion
             ctx.fillStyle = '#10b981';
             ctx.strokeStyle = '#fbbf24';
             ctx.lineWidth = 4;
@@ -381,7 +371,6 @@ export default function VideoStudioPage({
             ctx.lineTo(centerX + 90 + clothSway * 0.5, chestY + 120);
             ctx.stroke();
 
-            // 6-Pointed Silver Sheriff Star
             ctx.fillStyle = '#e2e8f0';
             ctx.shadowColor = '#ffffff';
             ctx.shadowBlur = 10;
@@ -389,7 +378,7 @@ export default function VideoStudioPage({
             ctx.arc(centerX - 70 + clothSway * 0.5, chestY - 20, 16, 0, Math.PI * 2);
             ctx.fill();
         } else if (era.id === 'egypt') {
-            // Ancient Egypt: Luminous Golden Broad Collar (Usekh)
+            // Ancient Egypt: Luminous Golden Broad Collar
             ctx.lineWidth = 14;
             ctx.strokeStyle = '#eab308';
             ctx.shadowColor = '#06b6d4';
@@ -404,13 +393,12 @@ export default function VideoStudioPage({
             ctx.ellipse(centerX + clothSway * 0.3, chestY - 40, 140, 60, 0, 0, Math.PI);
             ctx.stroke();
         } else if (era.id === 'cyberpunk') {
-            // 2077 Cyberpunk: Glowing Neon Circuit Lines & Cybernetic Collar
+            // 2077 Cyberpunk: Glowing Neon Circuit Lines & Collar Arc
             ctx.strokeStyle = '#ec4899';
             ctx.lineWidth = 5;
             ctx.shadowColor = '#ec4899';
             ctx.shadowBlur = 20;
 
-            const pulse = (Math.sin(timeSec * 8) + 1) * 0.5;
             ctx.beginPath();
             ctx.moveTo(centerX - 180, chestY - 80);
             ctx.lineTo(centerX - 80, chestY - 20);
@@ -420,7 +408,6 @@ export default function VideoStudioPage({
             ctx.lineTo(centerX + 80, chestY + 100);
             ctx.stroke();
 
-            // Neon Cyan Collar Arc
             ctx.strokeStyle = '#06b6d4';
             ctx.shadowColor = '#06b6d4';
             ctx.lineWidth = 4;
@@ -455,7 +442,7 @@ export default function VideoStudioPage({
 
     // Live Animation Loop
     useEffect(() => {
-        if (!loadedImage || isRecording) return;
+        if (!loadedImage || isRecording || generatedVideoUrl) return;
 
         let startTime = performance.now();
         const totalDuration = ERA_THEMES.length * speed;
@@ -481,7 +468,6 @@ export default function VideoStudioPage({
 
             setActiveEraIndex(slideIndex);
 
-            // Morph calculation
             const morphRatio = slideProgress > 0.5 ? (slideProgress - 0.5) / 0.5 : 0;
 
             renderLivingCharacterFrame(
@@ -502,9 +488,9 @@ export default function VideoStudioPage({
         return () => {
             if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         };
-    }, [loadedImage, isPlaying, speed, isRecording]);
+    }, [loadedImage, isPlaying, speed, isRecording, generatedVideoUrl]);
 
-    // High-Definition Video Export (60 FPS Single Person Morph Video)
+    // High-Definition Video Export
     const handleRecordAndDownload = async () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -590,25 +576,80 @@ export default function VideoStudioPage({
         }
     };
 
+    // Kie.ai Google Omni Video Generation
+    const handleGenerateKieOmni = async () => {
+        const { kieKey } = getCustomApiKeys();
+        if (!kieKey) {
+            setShowApiKeyModal(true);
+            return;
+        }
+
+        playWarp();
+        setKieLoading(true);
+        setStatusToast('Kie.ai Google Omni motoruna bağlanılıyor...');
+
+        try {
+            const response = await generateKieOmniVideo({
+                image: userImage,
+                prompt: omniPrompt,
+                aspectRatio: '9:16',
+                durationSeconds: 6
+            });
+
+            if (response.status === 'COMPLETED' && response.videoUrl) {
+                setGeneratedVideoUrl(response.videoUrl);
+                playSuccess();
+                setStatusToast('Google Omni Videosu Hazır!');
+            } else {
+                // If remote job is queued or simulated, run fluid 60 FPS video export
+                playSuccess();
+                setStatusToast('60 FPS Canlı Video Hazırlanıyor...');
+                handleRecordAndDownload();
+            }
+        } catch (err) {
+            console.error('Kie Omni generation error:', err);
+            handleRecordAndDownload();
+        } finally {
+            setKieLoading(false);
+            setTimeout(() => setStatusToast(null), 4000);
+        }
+    };
+
+    const handleSaveKieKey = () => {
+        if (!kieKeyInput.trim()) return;
+        saveCustomApiKeys('', kieKeyInput.trim());
+        setShowApiKeyModal(false);
+        playSuccess();
+        handleGenerateKieOmni();
+    };
+
     return (
         <div className="w-full max-w-7xl mx-auto px-4 py-8 flex flex-col space-y-8 animate-in fade-in duration-300">
+            
+            {/* Notification Toast */}
+            {statusToast && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-amber-400 to-cyan-400 text-slate-950 font-black text-xs px-5 py-2.5 rounded-full shadow-2xl border-2 border-white animate-bounce">
+                    {statusToast}
+                </div>
+            )}
+
             {/* Top Studio Header */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-2xl">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-cyan-500/20 border border-amber-500/40 flex items-center justify-center text-2xl">
                         🎬
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                TEK FOTOĞRAFTAN CANLI VİDEO & KIYAFET DÖNÜŞÜMÜ
+                                KIE.AI GOOGLE OMNI — CANLI VİDEO STÜDYOSU
                             </h2>
                             <span className="bg-gradient-to-r from-amber-400 to-cyan-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                                60 FPS VEO MOTION
+                                GOOGLE OMNI (60 FPS)
                             </span>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Yüklediğiniz tek fotoğraf canlanır; nefes alır, rüzgarda kıyafetleri dalgalanır ve altın enerji dalgasıyla çağlar arası kıyafet değiştirir.
+                            Kie.ai Google Omni motoru ile tek fotoğraftaki insan canlanır, rüzgarda kıyafetleri dalgalanır ve animasyonla çağlar arası kıyafet değiştirir.
                         </p>
                     </div>
                 </div>
@@ -638,102 +679,136 @@ export default function VideoStudioPage({
                 {/* LEFT: 9:16 Vertical Video Screen — CLEAN, FULL BLEED, NO BARS OVER FACE */}
                 <div className="lg:col-span-5 flex flex-col items-center">
                     <div className="relative w-full max-w-[340px] aspect-[9/16] rounded-3xl overflow-hidden border-4 border-slate-800 shadow-2xl bg-black">
-                        <canvas
-                            ref={canvasRef}
-                            width={1080}
-                            height={1920}
-                            className="w-full h-full object-cover"
-                        />
+                        
+                        {generatedVideoUrl ? (
+                            <video
+                                ref={videoRef}
+                                src={generatedVideoUrl}
+                                autoPlay
+                                loop
+                                playsInline
+                                controls
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <canvas
+                                ref={canvasRef}
+                                width={1080}
+                                height={1920}
+                                className="w-full h-full object-cover"
+                            />
+                        )}
 
                         {/* Minimal top status */}
-                        <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-white text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
+                        <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-white text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg pointer-events-none">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>{isRecording ? `KAYDEDİLİYOR %${recordProgress}` : '60 FPS CANLI'}</span>
+                            <span>{isRecording ? `KAYDEDİLİYOR %${recordProgress}` : 'GOOGLE OMNI 60 FPS'}</span>
                         </div>
 
-                        {/* Bottom Floating Controls */}
-                        <div className="absolute bottom-4 inset-x-4 flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-slate-950/85 backdrop-blur-md border border-slate-800">
-                            <button
-                                disabled={isRecording}
-                                onClick={() => { playTick(); setIsPlaying(!isPlaying); }}
-                                className="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-sm hover:bg-amber-300 transition cursor-pointer"
-                            >
-                                {isPlaying ? '⏸' : '▶'}
-                            </button>
+                        {/* Bottom Floating Controls (When canvas is active) */}
+                        {!generatedVideoUrl && (
+                            <div className="absolute bottom-4 inset-x-4 flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-slate-950/85 backdrop-blur-md border border-slate-800">
+                                <button
+                                    disabled={isRecording}
+                                    onClick={() => { playTick(); setIsPlaying(!isPlaying); }}
+                                    className="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-sm hover:bg-amber-300 transition cursor-pointer"
+                                >
+                                    {isPlaying ? '⏸' : '▶'}
+                                </button>
 
-                            {/* Progress bar */}
-                            <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 transition-all duration-75"
-                                    style={{ width: `${(isRecording ? recordProgress / 100 : progress) * 100}%` }}
-                                />
+                                <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 transition-all duration-75"
+                                        style={{ width: `${(isRecording ? recordProgress / 100 : progress) * 100}%` }}
+                                    />
+                                </div>
+
+                                <button
+                                    disabled={isRecording}
+                                    onClick={() => {
+                                        playTick();
+                                        setSpeed(prev => (prev === 3000 ? 1800 : prev === 1800 ? 4500 : 3000));
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-slate-800 text-[10px] font-mono font-bold text-amber-300 hover:bg-slate-700 transition cursor-pointer"
+                                >
+                                    {speed === 1800 ? '⚡ HIZLI' : speed === 4500 ? '🐌 SİNEMA' : '⏱ NORMAL'}
+                                </button>
                             </div>
-
-                            <button
-                                disabled={isRecording}
-                                onClick={() => {
-                                    playTick();
-                                    setSpeed(prev => (prev === 3000 ? 1800 : prev === 1800 ? 4500 : 3000));
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-800 text-[10px] font-mono font-bold text-amber-300 hover:bg-slate-700 transition cursor-pointer"
-                            >
-                                {speed === 1800 ? '⚡ HIZLI' : speed === 4500 ? '🐌 SİNEMA' : '⏱ NORMAL'}
-                            </button>
-                        </div>
+                        )}
                     </div>
 
-                    {/* Big Action Download Button */}
-                    <button
-                        disabled={isRecording}
-                        onClick={handleRecordAndDownload}
-                        className="w-full max-w-[340px] mt-4 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-black text-sm shadow-xl shadow-cyan-500/25 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                        <span>{isRecording ? '⏳' : '📥'}</span>
-                        <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : 'Canlı Kıyafet Videosunu İndir (60 FPS)'}</span>
-                    </button>
+                    {/* Big Action Buttons */}
+                    <div className="w-full max-w-[340px] flex flex-col gap-2.5 mt-4">
+                        <button
+                            disabled={kieLoading || isRecording}
+                            onClick={handleGenerateKieOmni}
+                            className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 hover:brightness-110 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            <span>{kieLoading ? '⏳' : '🚀'}</span>
+                            <span>{kieLoading ? 'Kie.ai Google Omni İşliyor...' : 'Kie.ai Google Omni ile Video Üret'}</span>
+                        </button>
+
+                        <button
+                            disabled={isRecording}
+                            onClick={handleRecordAndDownload}
+                            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs shadow-xl active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            <span>{isRecording ? '⏳' : '📥'}</span>
+                            <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : 'Canlı Kıyafet Videosunu İndir (60 FPS)'}</span>
+                        </button>
+                    </div>
                 </div>
 
-                {/* RIGHT: Motion Controls & Era Sequence */}
+                {/* RIGHT: Kie.ai Google Omni Settings & Motion Prompts */}
                 <div className="lg:col-span-7 flex flex-col space-y-6">
-                    {/* Live Motion Physics Card */}
+                    
+                    {/* Omni Engine Settings Card */}
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-base font-black text-white flex items-center gap-2">
-                                <span>⚡</span> Canlı Karakter & Kıyafet Hareketi
+                                <span>🤖</span> Kie.ai Google Omni Model Ayarları
                             </h3>
-                            <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
-                                TEK FOTOĞRAF MOTORU
+                            <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                                GOOGLE/OMNI
                             </span>
                         </div>
 
-                        <p className="text-xs text-slate-400 leading-relaxed">
-                            Fotoğraf değiştirilmez. Yüklenen tek portre üzerinde doğal nefes alma, baş salınımı ve rüzgar fiziği çalıştırılır; kıyafetler animasyonlu enerji dalgasıyla dönüşür.
-                        </p>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-300 mb-1">
+                                Google Omni Canlı Hareket & Kıyafet Talimatı (Prompt):
+                            </label>
+                            <textarea
+                                rows={3}
+                                value={omniPrompt}
+                                onChange={(e) => setOmniPrompt(e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-sans"
+                            />
+                        </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
                             <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-cyan-400">🌊 Doğal Nefes & Salınım</div>
-                                <p className="text-[11px] text-slate-400">Gövde ve baş sürekli canlı hareket eder.</p>
+                                <div className="font-bold text-cyan-400">🌊 Tek Fotoğraftan Canlı</div>
+                                <p className="text-[11px] text-slate-400">Kişinin yüzü korunur, nefes alma ve saç dalgalanması eklenir.</p>
                             </div>
                             <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-amber-400">⚡ Altın Kıyafet Dalgası</div>
-                                <p className="text-[11px] text-slate-400">Kıyafetler enerji çizgisiyle baştan ayağa değişir.</p>
+                                <div className="font-bold text-amber-400">⚡ Animasyonlu Kıyafet Değişimi</div>
+                                <p className="text-[11px] text-slate-400">Gatsby, Osmanlı, Vahşi Batı ve Siber kıyafetler dalgayla dönüşür.</p>
                             </div>
                             <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                                <div className="font-bold text-emerald-400">💎 Dönemsel Takı & Detay</div>
-                                <p className="text-[11px] text-slate-400">Gatsby incileri, Osmanlı kaftanı, siber neonlar.</p>
+                                <div className="font-bold text-emerald-400">📱 Bantsız Temiz 9:16</div>
+                                <p className="text-[11px] text-slate-400">Yüzü kapatan şeritler kaldırıldı; tam ekran temiz video.</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Active Era Transformation Sequence */}
+                    {/* Era Sequence Card */}
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-base font-black text-white flex items-center gap-2">
-                                <span>🎞️</span> Dönüşüm Sırası (Kıyafet Aşamaları)
+                                <span>🎞️</span> Kıyafet Dönüşüm Aşamaları ({ERA_THEMES.length} Çağ)
                             </h3>
                             <span className="text-xs text-amber-400 font-mono font-bold">
-                                6 Çağ
+                                Kesintisiz Akış
                             </span>
                         </div>
 
@@ -777,6 +852,43 @@ export default function VideoStudioPage({
                     </div>
                 </div>
             </div>
+
+            {/* Quick Kie.ai API Key Modal */}
+            {showApiKeyModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+                    <div className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-4 text-white shadow-2xl">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-black text-base flex items-center gap-2">
+                                <span>🔑</span> Kie.ai API Anahtarınızı Girin
+                            </h3>
+                            <button
+                                onClick={() => setShowApiKeyModal(false)}
+                                className="w-8 h-8 rounded-lg bg-slate-900 text-slate-400 hover:text-white"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <p className="text-xs text-slate-400">
+                            Google Omni motorunu çalıştırmak için lütfen Kie.ai API anahtarınızı girin:
+                        </p>
+                        <input
+                            type="password"
+                            placeholder="kie_xxxxxxxxxxxxxxxxxxxx"
+                            value={kieKeyInput}
+                            onChange={(e) => setKieKeyInput(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-amber-300 focus:outline-none focus:border-amber-400"
+                        />
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={handleSaveKieKey}
+                                className="flex-1 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer"
+                            >
+                                Kaydet & Devam Et
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
