@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://zamanmakinesi.app/sitemap.xml
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Sitemap: https://https://zamanmakinesi.app/sitemap.xml
