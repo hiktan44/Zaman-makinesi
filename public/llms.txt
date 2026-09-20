@@ -1,0 +1,9 @@
+# Zaman Makinesi
+
+> Yapay zekâ destekli yaratıcı görsel deneyim platformu.
+
+- Resmî site: https://zamanmakinesi.app/
+- Gizlilik ve KVKK: https://zamanmakinesi.app/gizlilik/
+- Kullanım koşulları: https://zamanmakinesi.app/kullanim-kosullari/
+- Çerez politikası: https://zamanmakinesi.app/cerez-politikasi/
+- İletişim: https://zamanmakinesi.app/iletisim/
