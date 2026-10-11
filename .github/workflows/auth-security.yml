@@ -1,0 +1,26 @@
+name: Gerçek giriş ve demo kimliği güvenliği
+on:
+  push:
+    branches: [main, 'codex/f57-*']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  auth-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Kilitli bağımlılıkları kur
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Gerçek SDK ve kimlik durumu testleri
+        run: npm run test:auth-security
+      - name: Giriş kapsamının TypeScript kontrolü
+        run: npx tsc --noEmit -p tsconfig.auth-security.json
+      - name: Vite üretim derlemesi
+        run: npm run build

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useState } from 'react';
-import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/supabaseService';
+import { signInWithEmail, signUpWithEmail, signInWithGoogle, isSupabaseConfigured } from '../services/supabaseService';
 import { useT } from '../lib/useT';
 
 interface AuthModalProps {
@@ -19,12 +19,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
 
     if (!isOpen) return null;
 
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setNotice('');
 
         if (isSignUp && password !== confirmPassword) {
             setError(t('auth.error.match'));
@@ -48,6 +50,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
             if (result.error) {
                 setError(result.error.message);
+            } else if (result.requiresEmailConfirmation) {
+                setNotice('Kaydınızı tamamlamak için e-postanıza gelen doğrulama bağlantısını açın.');
             } else {
                 onClose();
                 resetForm();
@@ -62,6 +66,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const handleGoogleSignIn = async () => {
         setError('');
         setLoading(true);
+        setNotice('');
 
         try {
             await signInWithGoogle();
@@ -80,6 +85,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         setConfirmPassword('');
         setError('');
         setIsSignUp(false);
+        setNotice('');
     };
 
     const handleClose = () => {
@@ -111,6 +117,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                 {/* Content */}
                 <div className="p-6 space-y-4">
+                    {!isSupabaseConfigured && (
+                        <div role="alert" className="bg-amber-50 text-amber-900 px-4 py-3 rounded-lg text-sm">
+                            Giriş şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.
+                        </div>
+                    )}
+                    {notice && (
+                        <div role="status" className="bg-blue-50 text-blue-900 px-4 py-3 rounded-lg text-sm">{notice}</div>
+                    )}
                     {/* Error Message */}
                     {error && (
                         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
@@ -121,7 +135,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     {/* Google Sign In */}
                     <button
                         onClick={handleGoogleSignIn}
-                        disabled={loading}
+                        disabled={loading || !isSupabaseConfigured}
                         className="w-full flex items-center justify-center gap-3 bg-white dark:bg-stone-800 border-2 border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-200 px-6 py-3 rounded-lg font-semibold hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -196,7 +210,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || !isSupabaseConfigured}
                             className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-yellow-500 hover:to-orange-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? t('auth.loading') : (isSignUp ? t('auth.signUp') : t('auth.signIn'))}
