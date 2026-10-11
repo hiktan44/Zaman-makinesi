@@ -1,34 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 
-// Stripe webhook için raw body middleware
+const parseRaw = express.raw({ type: 'application/json', limit: '1mb' });
+
+/** İmza kontrolü için gövdeyi değiştirmeden ve içeriğini loglamadan alır. */
 export const webhookRawBody = (req: Request, res: Response, next: NextFunction) => {
-  console.log('🚀 Webhook middleware çağrıldı');
-  console.log('📋 Method:', req.method);
-  console.log('📋 URL:', req.url);
-  console.log('📋 Content-Type:', req.get('content-type'));
-  console.log('📋 Content-Length:', req.get('content-length'));
-  
-  let data = '';
-
-  req.setEncoding('utf8');
-
-  req.on('data', (chunk) => {
-    console.log('📦 Data chunk alındı, boyut:', chunk.length);
-    data += chunk;
-  });
-
-  req.on('end', () => {
-    console.log('✅ Raw body tamamlandı, boyut:', data.length);
-    if (data.length > 0) {
-      console.log('📝 Raw body preview:', data.substring(0, 100));
-    }
-    (req as any).rawBody = Buffer.from(data);
-    console.log('✅ next() çağrılıyor');
+  parseRaw(req, res, (error: any) => {
+    if (error) return res.status(error.status === 413 ? 413 : 400).json({ error: 'Ödeme bildirimi gövdesi geçersiz' });
+    if (!Buffer.isBuffer(req.body)) return res.status(400).json({ error: 'Ödeme bildirimi JSON olmalıdır' });
+    (req as any).rawBody = req.body;
     next();
-  });
-
-  req.on('error', (err) => {
-    console.error('❌ Webhook middleware hatası:', err);
-    next(err);
   });
 };
