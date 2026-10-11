@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "services/auth-config.ts", "services/auth-session.ts", "services/supabaseService.ts",
+    "contexts/AuthContext.tsx", "components/AuthModal.tsx", "vite-env.d.ts"
+  ]
+}

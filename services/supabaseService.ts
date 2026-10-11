@@ -3,45 +3,34 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { browserAuthConfig } from './auth-config';
 
-// Supabase configuration
-const rawUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+const config = browserAuthConfig(import.meta.env);
+const UNAVAILABLE = 'Giriş şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.';
+// Önceki demo kaydı gerçek oturum olarak kullanılmaz; diğer tarayıcı verileri korunur.
+try { localStorage.removeItem('zm_local_user'); } catch { /* Depolama kapalı olabilir. */ }
 
-const isValidSupabase = !!rawUrl && rawUrl.startsWith('http') && !!rawKey;
-
-const supabaseUrl = isValidSupabase ? rawUrl : 'https://placeholder-zaman-makinesi.supabase.co';
-const supabaseAnonKey = isValidSupabase ? rawKey : 'placeholder-anon-key';
-
-// Safely initialize Supabase without throwing errors
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase: SupabaseClient | null = config ? createClient(config.url, config.key, {
     auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
     }
-});
+}) : null;
 
-export const isSupabaseConfigured = isValidSupabase;
+export const isSupabaseConfigured = !!supabase;
+
+interface EmailAuthResult {
+    user: User | null;
+    error: Error | null;
+    requiresEmailConfirmation?: boolean;
+}
 
 /**
  * Sign in with email and password
  */
-export async function signInWithEmail(email: string, password: string): Promise<{ user: User | null; error: Error | null }> {
-    if (!isValidSupabase) {
-        // Fallback local mock authentication
-        const mockUser = {
-            id: 'mock_user_' + Date.now().toString(36),
-            email: email,
-            app_metadata: {},
-            user_metadata: { name: email.split('@')[0] },
-            aud: 'authenticated',
-            created_at: new Date().toISOString(),
-        } as unknown as User;
-        localStorage.setItem('zm_local_user', JSON.stringify(mockUser));
-        window.dispatchEvent(new CustomEvent('zm_auth_changed', { detail: mockUser }));
-        return { user: mockUser, error: null };
-    }
+export async function signInWithEmail(email: string, password: string): Promise<EmailAuthResult> {
+    if (!supabase) return { user: null, error: new Error(UNAVAILABLE) };
 
     const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -58,20 +47,8 @@ export async function signInWithEmail(email: string, password: string): Promise<
 /**
  * Create new account with email and password
  */
-export async function signUpWithEmail(email: string, password: string): Promise<{ user: User | null; error: Error | null }> {
-    if (!isValidSupabase) {
-        const mockUser = {
-            id: 'mock_user_' + Date.now().toString(36),
-            email: email,
-            app_metadata: {},
-            user_metadata: { name: email.split('@')[0] },
-            aud: 'authenticated',
-            created_at: new Date().toISOString(),
-        } as unknown as User;
-        localStorage.setItem('zm_local_user', JSON.stringify(mockUser));
-        window.dispatchEvent(new CustomEvent('zm_auth_changed', { detail: mockUser }));
-        return { user: mockUser, error: null };
-    }
+export async function signUpWithEmail(email: string, password: string): Promise<EmailAuthResult> {
+    if (!supabase) return { user: null, error: new Error(UNAVAILABLE) };
 
     const { data, error } = await supabase.auth.signUp({
         email,
@@ -82,26 +59,14 @@ export async function signUpWithEmail(email: string, password: string): Promise<
         return { user: null, error: new Error(translateAuthError(error.message)) };
     }
 
-    return { user: data.user, error: null };
+    return { user: data.user, error: null, requiresEmailConfirmation: !!data.user && !data.session };
 }
 
 /**
  * Sign in with Google
  */
 export async function signInWithGoogle() {
-    if (!isValidSupabase) {
-        const mockUser = {
-            id: 'google_user_hikmet',
-            email: 'hikmet044@gmail.com',
-            app_metadata: { provider: 'google' },
-            user_metadata: { name: 'Hikmet (Admin)', full_name: 'Hikmet', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' },
-            aud: 'authenticated',
-            created_at: new Date().toISOString(),
-        } as unknown as User;
-        localStorage.setItem('zm_local_user', JSON.stringify(mockUser));
-        window.dispatchEvent(new CustomEvent('zm_auth_changed', { detail: mockUser }));
-        return;
-    }
+    if (!supabase) throw new Error(UNAVAILABLE);
 
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -119,9 +84,8 @@ export async function signInWithGoogle() {
  * Sign out current user
  */
 export async function logOut(): Promise<void> {
-    localStorage.removeItem('zm_local_user');
-    window.dispatchEvent(new CustomEvent('zm_auth_changed', { detail: null }));
-    if (isValidSupabase) {
+    try { localStorage.removeItem('zm_local_user'); } catch { /* Depolama kapalı olabilir. */ }
+    if (supabase) {
         await supabase.auth.signOut();
     }
 }
@@ -142,5 +106,5 @@ function translateAuthError(message: string): string {
     if (message.includes('rate limit')) {
         return 'Çok fazla istek gönderildi. Lütfen birkaç dakika sonra tekrar deneyin.';
     }
-    return message;
+    return 'Giriş işlemi tamamlanamadı. Lütfen tekrar deneyin.';
 }
