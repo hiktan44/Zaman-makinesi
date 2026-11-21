@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { t } from '../lib/i18n';
 
 // Supabase configuration
 const rawUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
@@ -127,20 +128,20 @@ export async function logOut(): Promise<void> {
 }
 
 /**
- * Translate Supabase error messages to Turkish
+ * Translate Supabase error messages (shown in the active UI language)
  */
 function translateAuthError(message: string): string {
     if (message.includes('Invalid login credentials')) {
-        return 'E-posta adresi veya şifre hatalı.';
+        return t('auth.err.invalid');
     }
     if (message.includes('User already registered')) {
-        return 'Bu e-posta adresi ile zaten bir hesap mevcut.';
+        return t('auth.err.exists');
     }
     if (message.includes('Password should be at least')) {
-        return 'Şifre en az 6 karakter olmalıdır.';
+        return t('auth.err.short');
     }
     if (message.includes('rate limit')) {
-        return 'Çok fazla istek gönderildi. Lütfen birkaç dakika sonra tekrar deneyin.';
+        return t('auth.err.rate');
     }
     return message;
 }

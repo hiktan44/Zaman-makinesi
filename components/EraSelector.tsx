@@ -5,6 +5,8 @@
 import React, { useState } from 'react';
 import { ERAS, ERA_CATEGORIES, EraCategory, EraDefinition } from '../constants/eraConstants';
 import { playTick } from '../lib/sfxUtils';
+import { useT } from '../lib/useT';
+import { eraText } from '../constants/eraDisplay';
 
 interface EraSelectorProps {
     selectedEraIds: string[];
@@ -20,6 +22,7 @@ export default function EraSelector({
     onClearAll,
 }: EraSelectorProps) {
     const [activeCategory, setActiveCategory] = useState<EraCategory>('all');
+    const { t, lang } = useT();
 
     const filteredEras = activeCategory === 'all'
         ? ERAS
@@ -32,10 +35,10 @@ export default function EraSelector({
                 <div className="flex items-center gap-2">
                     <span className="text-xl">🌌</span>
                     <h3 className="text-base md:text-lg font-bold text-white tracking-tight">
-                        Hedef Çağları Seçin
+                        {t('es.title')}
                     </h3>
                     <span className="ml-2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 text-xs font-bold font-mono">
-                        {selectedEraIds.length} Çağ Seçili
+                        {t('es.selected', { n: selectedEraIds.length })}
                     </span>
                 </div>
 
@@ -45,14 +48,14 @@ export default function EraSelector({
                         onClick={() => { playTick(); onSelectAll(); }}
                         className="text-xs font-bold text-amber-400 hover:text-amber-300 transition px-2 py-1 cursor-pointer"
                     >
-                        Tümünü Seç
+                        {t('es.all')}
                     </button>
                     <span className="text-slate-600">|</span>
                     <button
                         onClick={() => { playTick(); onClearAll(); }}
                         className="text-xs font-bold text-slate-400 hover:text-white transition px-2 py-1 cursor-pointer"
                     >
-                        Temizle
+                        {t('es.clear')}
                     </button>
                 </div>
             </div>
@@ -73,7 +76,7 @@ export default function EraSelector({
                             }`}
                         >
                             <span>{cat.icon}</span>
-                            <span>{cat.labelTr}</span>
+                            <span>{lang === 'tr' ? cat.labelTr : cat.labelEn}</span>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                                 isActive ? 'bg-slate-950 text-amber-400 font-bold' : 'bg-slate-800 text-slate-400'
                             }`}>
@@ -88,6 +91,7 @@ export default function EraSelector({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[500px] overflow-y-auto pr-1">
                 {filteredEras.map((era) => {
                     const isSelected = selectedEraIds.includes(era.id);
+                    const et = eraText(era, lang);
                     return (
                         <div
                             key={era.id}
@@ -113,14 +117,14 @@ export default function EraSelector({
                                         <div>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="font-mono text-xs font-black text-amber-300 tracking-wider">
-                                                    {era.yearDisplay}
+                                                    {et.year}
                                                 </span>
                                                 <span className="rounded bg-black/50 backdrop-blur-sm border border-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300">
-                                                    {era.badge}
+                                                    {et.badge}
                                                 </span>
                                             </div>
                                             <h4 className="text-sm font-bold text-white leading-snug line-clamp-1 mt-0.5 drop-shadow-sm">
-                                                {era.titleTr}
+                                                {et.title}
                                             </h4>
                                         </div>
                                     </div>
@@ -140,7 +144,7 @@ export default function EraSelector({
                                 </div>
 
                                 <p className="text-[11px] text-slate-300/90 leading-tight line-clamp-2 drop-shadow">
-                                    {era.historicalFactTr}
+                                    {et.fact}
                                 </p>
                             </div>
                         </div>
