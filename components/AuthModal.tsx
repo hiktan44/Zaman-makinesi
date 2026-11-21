@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/supabaseService';
 import { useT } from '../lib/useT';
+import LangSwitch from './LangSwitch';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -90,6 +91,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="relative w-full max-w-md bg-white dark:bg-surface-dark rounded-2xl shadow-2xl overflow-hidden">
+                <div className="absolute top-4 left-4 z-10">
+                    <LangSwitch />
+                </div>
                 {/* Close button */}
                 <button
                     onClick={handleClose}

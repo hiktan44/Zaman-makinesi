@@ -5,6 +5,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ERAS } from '../constants/eraConstants';
 import { playSuccess, playTick, playWarp } from '../lib/sfxUtils';
+import { useT } from '../lib/useT';
+import { eraText } from '../constants/eraDisplay';
+import { t as tt } from '../lib/i18n';
 
 interface VideoMorphModalProps {
     isOpen: boolean;
@@ -52,6 +55,7 @@ export default function VideoMorphModal({
     images,
     originalImage
 }: VideoMorphModalProps) {
+    const { t, lang } = useT();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
@@ -61,12 +65,12 @@ export default function VideoMorphModal({
     const animFrameRef = useRef<number | null>(null);
 
     const timelineItems = [
-        ...(originalImage ? [{ eraId: 'present', title: '2026 GÜNÜMÜZ', url: originalImage }] : []),
+        ...(originalImage ? [{ eraId: 'present', title: t('vm.today'), url: originalImage }] : []),
         ...images.map(img => {
             const era = ERAS.find(e => e.id === img.eraId);
             return {
                 eraId: img.eraId,
-                title: era ? `${era.yearDisplay} — ${era.titleTr}` : img.eraId,
+                title: era ? `${eraText(era, lang).year} — ${eraText(era, lang).title}` : img.eraId,
                 url: img.url
             };
         })
@@ -142,7 +146,7 @@ export default function VideoMorphModal({
         ctx.fillText('⚡ ZAMAN MAKİNESİ — TIMELAPSE', w / 2, 115);
         ctx.fillStyle = '#ffffff';
         ctx.font = '22px monospace';
-        ctx.fillText('9:16 VERTICAL REELS KLİP', w / 2, 150);
+        ctx.fillText(t('vm.canvasSub'), w / 2, 150);
 
         if (currentItem) {
             ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
@@ -157,7 +161,7 @@ export default function VideoMorphModal({
 
             ctx.fillStyle = '#94a3b8';
             ctx.font = '24px monospace';
-            ctx.fillText(`KARE: ${slideIndex + 1} / ${timelineItems.length}`, w / 2, h - 120);
+            ctx.fillText(tt('vm.frame', undefined, { i: slideIndex + 1, n: timelineItems.length }), w / 2, h - 120);
         }
     };
 
@@ -309,7 +313,7 @@ export default function VideoMorphModal({
         } catch (err) {
             console.error('Video kayıt hatası:', err);
             setIsRecording(false);
-            alert('Tarayıcınızda video kaydı başlatılamadı.');
+            alert(t('vm.alertFail'));
         }
     };
 
@@ -324,7 +328,7 @@ export default function VideoMorphModal({
                     <div className="flex items-center gap-2">
                         <span className="text-xl">🎬</span>
                         <h3 className="font-black text-white text-base">
-                            9:16 ZAMAN TÜNELİ KLİBİ (REELS)
+                            {t('vm.title')}
                         </h3>
                     </div>
                     <button
@@ -345,7 +349,7 @@ export default function VideoMorphModal({
                     />
 
                     <div className="absolute top-3 right-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse">
-                        {isRecording ? `%${recordProgress}` : 'CANLI'}
+                        {isRecording ? t('vm.percent', { n: recordProgress }) : t('vm.live')}
                     </div>
 
                     <div className="absolute bottom-3 inset-x-3 flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-800">
@@ -372,7 +376,7 @@ export default function VideoMorphModal({
                     className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black text-xs shadow-xl active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                     <span>{isRecording ? '⏳' : '📥'}</span>
-                    <span>{isRecording ? `Video Kaydediliyor (%${recordProgress})...` : '9:16 Video Olarak İndir (Reels / TikTok)'}</span>
+                    <span>{isRecording ? t('vm.recording', { n: recordProgress }) : t('vm.download')}</span>
                 </button>
             </div>
         </div>

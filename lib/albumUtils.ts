@@ -2,6 +2,8 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
+import { t } from './i18n';
+
 // Helper function to load an image and return it as an HTMLImageElement
 function loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -42,11 +44,11 @@ export async function createAlbumPage(imageData: Record<string, string>, addCred
     ctx.textAlign = 'center';
 
     ctx.font = `bold 100px 'Caveat', cursive`;
-    ctx.fillText('Past Forward ile oluşturuldu', canvasWidth / 2, 150);
+    ctx.fillText(t('album.title'), canvasWidth / 2, 150);
 
     ctx.font = `50px 'Roboto', sans-serif`;
     ctx.fillStyle = '#555';
-    ctx.fillText('Google AI Studio üzerinde', canvasWidth / 2, 220);
+    ctx.fillText(t('album.sub'), canvasWidth / 2, 220);
 
     // 3. Load all the polaroid images concurrently
     const decades = Object.keys(imageData);
@@ -162,7 +164,7 @@ export async function createAlbumPage(imageData: Record<string, string>, addCred
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
         // Position in the bottom right corner with some padding
-        ctx.fillText('Hikmet Tanrıverdi tarafından oluşturuldu', canvasWidth - 60, canvasHeight - 60);
+        ctx.fillText(t('album.credit'), canvasWidth - 60, canvasHeight - 60);
         ctx.restore();
     }
 

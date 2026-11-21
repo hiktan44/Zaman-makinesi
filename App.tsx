@@ -22,6 +22,7 @@ import VideoStudioPage from './components/VideoStudioPage';
 import NewspaperStudioPage from './components/NewspaperStudioPage';
 import AlbumStudioPage from './components/AlbumStudioPage';
 import { ERAS, ALL_ERA_IDS, ERA_CATEGORIES, EraCategory } from './constants/eraConstants';
+import { eraText } from './constants/eraDisplay';
 import { useT } from './lib/useT';
 import { playCameraShutter, playSuccess, playTick, playWarp } from './lib/sfxUtils';
 import { addAdminLog } from './lib/adminStore';
@@ -48,7 +49,7 @@ const useMediaQuery = (query: string) => {
 };
 
 function App() {
-    const { t } = useT();
+    const { t, lang } = useT();
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImage>>({});
     const [selectedEraIds, setSelectedEraIds] = useState<string[]>([
@@ -111,7 +112,7 @@ function App() {
     const generateSingleEra = async (eraId: string, sourceImg: string) => {
         const startTime = Date.now();
         const eraDef = ERAS.find(e => e.id === eraId);
-        const eraDisplay = eraDef ? eraDef.yearDisplay : eraId;
+        const eraDisplay = eraDef ? eraText(eraDef, lang).year : eraId;
 
         setGeneratedImages(prev => ({
             ...prev,
@@ -172,7 +173,7 @@ function App() {
 
         const requiredCredits = selectedEraIds.length * costs.SINGLE_PHOTO;
         if (!isPremium && credits < requiredCredits) {
-            alert(`Yetersiz Plütonyum Kredisi! ${selectedEraIds.length} çağ için ${requiredCredits} kredi gerekiyor. Mevcut bakiyeniz: ${credits}`);
+            alert(t('app.insufficient', { n: selectedEraIds.length, req: requiredCredits, credits }));
             setShowPricingModal(true);
             return;
         }
@@ -198,13 +199,13 @@ function App() {
         const ungeneratedEras = targetEras.filter(e => !generatedImages[e.id] || generatedImages[e.id].status !== 'done');
 
         if (ungeneratedEras.length === 0) {
-            alert('Bu sekmedeki tüm çağlar zaten üretilmiş durumda!');
+            alert(t('app.allDone'));
             return;
         }
 
         const requiredCredits = ungeneratedEras.length * costs.SINGLE_PHOTO;
         if (!isPremium && credits < requiredCredits) {
-            alert(`Yetersiz Kredi! Bu kategorideki ${ungeneratedEras.length} çağ için ${requiredCredits} kredi gerekiyor.`);
+            alert(t('app.insufficientCat', { n: ungeneratedEras.length, req: requiredCredits }));
             setShowPricingModal(true);
             return;
         }
@@ -257,13 +258,13 @@ function App() {
                 .map(id => {
                     const era = ERAS.find(e => e.id === id);
                     return {
-                        decade: era ? `${era.yearDisplay} ${era.titleTr}` : id,
+                        decade: era ? `${eraText(era, lang).year} ${eraText(era, lang).title}` : id,
                         url: generatedImages[id]!.url!
                     };
                 });
 
             if (validImages.length === 0) {
-                alert('İndirilecek hazır görsel bulunamadı.');
+                alert(t('app.noReady'));
                 return;
             }
 
@@ -275,7 +276,7 @@ function App() {
             playSuccess();
         } catch (error) {
             console.error('Albüm indirme hatası:', error);
-            alert('Albüm PDF oluşturulurken bir hata oluştu.');
+            alert(t('app.albumError'));
         } finally {
             setIsDownloading(false);
         }
@@ -348,10 +349,10 @@ function App() {
                                             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 flex items-center gap-1.5 transition cursor-pointer"
                                         >
                                             <span>←</span>
-                                            <span>Yeni Fotoğraf Yükle</span>
+                                            <span>{t('app.newPhoto')}</span>
                                         </button>
                                         <div className="text-xs text-slate-400 font-mono">
-                                            Hazır Portreler: <span className="text-amber-400 font-bold">{completedImagesList.length} Çağ</span>
+                                            {t('app.readyLabel')}<span className="text-amber-400 font-bold">{t('app.erasCount', { n: completedImagesList.length })}</span>
                                         </div>
                                     </div>
 
@@ -364,14 +365,14 @@ function App() {
                                                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black text-xs shadow-md hover:brightness-110 active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
                                                 >
                                                     <span>🎬</span>
-                                                    <span>9:16 Video Stüdyosu</span>
+                                                    <span>{t('app.video')}</span>
                                                 </button>
                                                 <button
                                                     onClick={() => { playTick(); setActiveTab('newspaper'); }}
                                                     className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
                                                 >
                                                     <span>📰</span>
-                                                    <span>Gazete & Pasaport</span>
+                                                    <span>{t('app.newspaper')}</span>
                                                 </button>
                                                 <button
                                                     disabled={isDownloading}
@@ -379,7 +380,7 @@ function App() {
                                                     className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
                                                 >
                                                     <span>📖</span>
-                                                    <span>PDF Albüm</span>
+                                                    <span>{t('app.pdf')}</span>
                                                 </button>
                                                 <button
                                                     disabled={isDownloading}
@@ -387,7 +388,7 @@ function App() {
                                                     className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition cursor-pointer flex items-center gap-1.5"
                                                 >
                                                     <span>📥</span>
-                                                    <span>Tümünü İndir</span>
+                                                    <span>{t('app.downloadAll')}</span>
                                                 </button>
                                             </>
                                         )}
@@ -409,7 +410,7 @@ function App() {
                                                     }`}
                                                 >
                                                     <span>{cat.icon}</span>
-                                                    <span>{cat.labelTr}</span>
+                                                    <span>{lang === 'tr' ? cat.labelTr : cat.labelEn}</span>
                                                 </button>
                                             ))}
                                         </div>
@@ -420,7 +421,7 @@ function App() {
                                             className="px-3.5 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                                         >
                                             <span>⚡</span>
-                                            <span>Bu Sekmedeki Tümünü Işınla</span>
+                                            <span>{t('app.beamAll')}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -432,7 +433,8 @@ function App() {
                                         const isDone = genState?.status === 'done';
                                         const isPending = genState?.status === 'pending';
                                         const isError = genState?.status === 'error';
-                                        const caption = `${era.yearDisplay} ${era.titleTr}`;
+                                        const et = eraText(era, lang);
+                                        const caption = `${et.year} ${et.title}`;
 
                                         if (isDone || isPending || isError) {
                                             return (
@@ -470,7 +472,7 @@ function App() {
                                                 <div className="relative z-10 w-full flex items-center justify-between">
                                                     <span className="text-xl">{era.icon}</span>
                                                     <span className="text-[10px] bg-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded-full">
-                                                        {era.badge}
+                                                        {et.badge}
                                                     </span>
                                                 </div>
 
@@ -479,10 +481,10 @@ function App() {
                                                         ⏳
                                                     </div>
                                                     <h4 className="text-sm font-bold text-white leading-tight">
-                                                        {era.titleTr}
+                                                        {et.title}
                                                     </h4>
                                                     <p className="text-[11px] text-slate-400 line-clamp-2">
-                                                        {era.newspaperSubTr}
+                                                        {et.sub}
                                                     </p>
                                                 </div>
 
@@ -492,7 +494,7 @@ function App() {
                                                     className="relative z-10 w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black text-xs shadow-md hover:brightness-110 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
                                                 >
                                                     <span>⚡</span>
-                                                    <span>Bu Çağa Işınlan (1 Kredi)</span>
+                                                    <span>{t('app.beamOne')}</span>
                                                 </button>
                                             </div>
                                         );

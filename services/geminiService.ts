@@ -4,6 +4,7 @@
  */
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 import { ERAS } from "../constants/eraConstants";
+import { t } from '../lib/i18n';
 
 export function getCustomApiKeys(): { geminiKey: string; kieKey: string; falKey: string } {
     const geminiKey = localStorage.getItem('zm_custom_gemini_key') || import.meta.env.VITE_API_KEY?.trim() || "";
@@ -102,7 +103,7 @@ async function generateWithKieSeedance(imageBase64: string, mimeType: string, pr
     });
 
     if (!res.ok) {
-        throw new Error(`Kie.ai API Hatası: ${res.statusText}`);
+        throw new Error(t('kie.err', undefined, { text: res.statusText }));
     }
 
     const data = await res.json();

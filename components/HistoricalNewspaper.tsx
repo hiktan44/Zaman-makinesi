@@ -7,6 +7,8 @@ import html2canvas from 'html2canvas';
 import { ERAS, EraDefinition } from '../constants/eraConstants';
 import { playCameraShutter, playSuccess, playTick } from '../lib/sfxUtils';
 import { useAuth } from '../contexts/AuthContext';
+import { useT } from '../lib/useT';
+import { eraText, type EraText } from '../constants/eraDisplay';
 
 interface HistoricalNewspaperProps {
     isOpen: boolean;
@@ -26,6 +28,7 @@ export default function HistoricalNewspaper({
     const [mode, setMode] = useState<'newspaper' | 'passport'>('newspaper');
     const [isExporting, setIsExporting] = useState(false);
     const { user } = useAuth();
+    const { t, lang } = useT();
 
     const era: EraDefinition = ERAS.find(e => e.id === eraId) || {
         id: eraId,
@@ -43,6 +46,18 @@ export default function HistoricalNewspaper({
     };
 
     if (!isOpen) return null;
+
+    const known = ERAS.some(e => e.id === eraId);
+    const et: EraText = known
+        ? eraText(era, lang)
+        : {
+            year: era.yearDisplay,
+            title: t('hn.fallbackTitle'),
+            badge: t('hn.fallbackBadge'),
+            headline: t('hn.fallbackHeadline'),
+            sub: t('hn.fallbackSub'),
+            fact: t('hn.fallbackFact'),
+        };
 
     const travelerName = user?.email ? user.email.split('@')[0].toUpperCase() : 'HİKMET SEYMATA';
     const passportNo = `ZM-${era.yearDisplay.replace(/\D/g, '') || '1985'}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -68,7 +83,7 @@ export default function HistoricalNewspaper({
             playSuccess();
         } catch (error) {
             console.error('İndirme hatası:', error);
-            alert('Görsel indirilirken bir sorun oluştu.');
+            alert(t('hn.alertFail'));
         } finally {
             setIsExporting(false);
         }
@@ -89,7 +104,7 @@ export default function HistoricalNewspaper({
                                     : 'text-slate-300 hover:text-white'
                             }`}
                         >
-                            🗞️ Dönem Gazetesi
+                            {t('hn.tabNewspaper')}
                         </button>
                         <button
                             onClick={() => { playTick(); setMode('passport'); }}
@@ -99,14 +114,14 @@ export default function HistoricalNewspaper({
                                     : 'text-slate-300 hover:text-white'
                             }`}
                         >
-                            🛂 Zaman Pasaportu
+                            {t('hn.tabPassport')}
                         </button>
                     </div>
 
                     <button
                         onClick={() => { playTick(); onClose(); }}
                         className="rounded-full bg-slate-800 p-2 text-slate-400 hover:text-white hover:bg-slate-700 transition cursor-pointer"
-                        aria-label="Kapat"
+                        aria-label={t('hn.close')}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -128,25 +143,25 @@ export default function HistoricalNewspaper({
                             {/* Paper Header */}
                             <div className="text-center border-b-2 border-[#3d3224] pb-3">
                                 <div className="flex items-center justify-between text-[11px] font-mono tracking-widest text-[#5c4d38] border-b border-[#3d3224]/30 pb-1 mb-2">
-                                    <span>YIL: {era.yearDisplay} // ÖZEL BASKI</span>
-                                    <span>SAYI: NO. {Math.floor(100 + Math.random() * 900)}</span>
-                                    <span>FİYAT: 5 KURUŞ</span>
+                                    <span>{t('hn.year')}{et.year}{t('hn.editionTail')}</span>
+                                    <span>{t('hn.issue')}{Math.floor(100 + Math.random() * 900)}</span>
+                                    <span>{t('hn.price')}</span>
                                 </div>
                                 <h1 className="text-3xl sm:text-4xl font-black tracking-tight font-serif uppercase text-[#1c1813]">
                                     THE TIME TRAVELER POST
                                 </h1>
                                 <p className="text-[10px] sm:text-xs tracking-wider uppercase text-[#5c4d38] italic mt-0.5">
-                                    Cihan Havadisleri & Çağlar Arası Tarih Mecmuası
+                                    {t('hn.tagline')}
                                 </p>
                             </div>
 
                             {/* Headline */}
                             <div className="text-center my-3">
                                 <h2 className="text-xl sm:text-2xl font-black leading-tight text-[#1c1813] uppercase border-y-2 border-[#3d3224] py-2">
-                                    {era.newspaperHeadlineTr}
+                                    {et.headline}
                                 </h2>
                                 <p className="text-xs sm:text-sm font-semibold text-[#3d3224] mt-1.5 italic">
-                                    {era.newspaperSubTr}
+                                    {et.sub}
                                 </p>
                             </div>
 
@@ -156,30 +171,30 @@ export default function HistoricalNewspaper({
                                     <div className="border-2 border-[#3d3224] p-1.5 bg-[#eae0c8] shadow-md">
                                         <img
                                             src={imageUrl}
-                                            alt="Tarihi Portre"
+                                            alt={t('hn.photoAlt')}
                                             className="w-full h-auto object-cover grayscale contrast-125 sepia-[0.3]"
                                         />
                                     </div>
                                     <span className="text-[10px] text-[#5c4d38] italic mt-1 text-center font-mono">
-                                        Görsel: {travelerName} ({era.yearDisplay})
+                                        {t('hn.photoCredit')}{travelerName} ({et.year})
                                     </span>
                                 </div>
 
                                 <div className="sm:col-span-6 text-[11px] leading-relaxed text-[#2c2419] space-y-2 text-justify">
                                     <p>
-                                        <span className="text-2xl font-black float-left mr-1.5 leading-none">B</span>
-                                        ugün tarihe geçecek olağanüstü bir hadiseye şahitlik edildi. Zaman tünelinden intikal eden seyyah <strong>{travelerName}</strong>, dönemin önde gelen cemiyeti tarafından karşılandı.
+                                        <span className="text-2xl font-black float-left mr-1.5 leading-none">{t('hn.dropcap')}</span>
+                                        {t('hn.art1a')}<strong>{travelerName}</strong>{t('hn.art1b')}
                                     </p>
                                     <p>
-                                        Dönemin atmosferine bizzat intibak eden seyyah, <em>"{era.historicalFactTr}"</em> notunu düşerek tarihi arşive mühür vurdu.
+                                        {t('hn.art2a')}<em>"{et.fact}"</em>{t('hn.art2b')}
                                     </p>
                                 </div>
                             </div>
 
                             {/* Footer Bar */}
                             <div className="border-t-2 border-[#3d3224] pt-2 text-[9px] font-mono text-[#5c4d38] flex justify-between items-center">
-                                <span>ZAMAN BAKANLIĞI RESMİ ARŞİVİ</span>
-                                <span>KOD: {passportNo}</span>
+                                <span>{t('hn.footerLeft')}</span>
+                                <span>{t('hn.code')}{passportNo}</span>
                             </div>
                         </div>
                     </div>
@@ -200,10 +215,10 @@ export default function HistoricalNewspaper({
                             {/* Header */}
                             <div className="border-b border-amber-400/30 pb-3 mb-4">
                                 <div className="text-[10px] font-mono tracking-widest text-amber-400 uppercase">
-                                    TEMPORAL TRAVEL AUTHORITY // PASAPORT
+                                    {t('hn.passportTop')}
                                 </div>
                                 <h2 className="text-xl font-black text-white tracking-wide">
-                                    ZAMAN BAKANLIĞI VİZESİ
+                                    {t('hn.visaTitle')}
                                 </h2>
                             </div>
 
@@ -212,35 +227,35 @@ export default function HistoricalNewspaper({
                                 <div className="w-28 h-36 rounded-xl overflow-hidden border-2 border-amber-400/80 shadow-md shrink-0">
                                     <img
                                         src={imageUrl}
-                                        alt="Seyyah Portresi"
+                                        alt={t('hn.travelerAlt')}
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
 
                                 <div className="space-y-2 text-xs">
                                     <div>
-                                        <div className="text-[9px] font-mono text-slate-400 uppercase">Seyyah Adı</div>
+                                        <div className="text-[9px] font-mono text-slate-400 uppercase">{t('hn.travelerName')}</div>
                                         <div className="font-bold text-white text-sm">{travelerName}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] font-mono text-slate-400 uppercase">Hedef Çağ / Yıl</div>
-                                        <div className="font-bold text-amber-400">{era.titleTr} ({era.yearDisplay})</div>
+                                        <div className="text-[9px] font-mono text-slate-400 uppercase">{t('hn.target')}</div>
+                                        <div className="font-bold text-amber-400">{et.title} ({et.year})</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] font-mono text-slate-400 uppercase">Pasaport No</div>
+                                        <div className="text-[9px] font-mono text-slate-400 uppercase">{t('hn.passportNo')}</div>
                                         <div className="font-mono font-bold text-emerald-400 text-xs">{passportNo}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] font-mono text-slate-400 uppercase">Yetki Düzeyi</div>
-                                        <div className="font-bold text-cyan-300">SINIRSIZ ZAMAN YOLCUSU ⚡</div>
+                                        <div className="text-[9px] font-mono text-slate-400 uppercase">{t('hn.level')}</div>
+                                        <div className="font-bold text-cyan-300">{t('hn.levelValue')}</div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Passport Footer Stamp */}
                             <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
-                                <span>ONAYLANDI: HILL VALLEY 1985</span>
-                                <span className="text-amber-400 font-bold">MÜHÜRLÜ & GEÇERLİ</span>
+                                <span>{t('hn.approved')}</span>
+                                <span className="text-amber-400 font-bold">{t('hn.sealed')}</span>
                             </div>
                         </div>
                     </div>
@@ -254,13 +269,13 @@ export default function HistoricalNewspaper({
                         className="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20 hover:brightness-110 active:scale-95 transition flex items-center gap-2 cursor-pointer"
                     >
                         <span>📥</span>
-                        <span>{isExporting ? 'Hazırlanıyor...' : `${mode === 'newspaper' ? 'Gazeteyi' : 'Pasaportu'} İndir (PNG)`}</span>
+                        <span>{isExporting ? t('hn.preparing') : t(mode === 'newspaper' ? 'hn.dlNewspaper' : 'hn.dlPassport')}</span>
                     </button>
                     <button
                         onClick={() => { playTick(); onClose(); }}
                         className="px-5 py-3 rounded-2xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-sm font-bold transition cursor-pointer"
                     >
-                        Kapat
+                        {t('hn.close')}
                     </button>
                 </div>
             </div>

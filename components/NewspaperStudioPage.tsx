@@ -7,6 +7,8 @@ import html2canvas from 'html2canvas';
 import { ERAS, EraDefinition } from '../constants/eraConstants';
 import { playCameraShutter, playSuccess, playTick } from '../lib/sfxUtils';
 import { useAuth } from '../contexts/AuthContext';
+import { useT } from '../lib/useT';
+import { eraText } from '../constants/eraDisplay';
 
 interface NewspaperStudioPageProps {
     images: { eraId: string; url: string }[];
@@ -25,6 +27,7 @@ export default function NewspaperStudioPage({
     const [selectedEraId, setSelectedEraId] = useState<string>('1920s');
     const [isExporting, setIsExporting] = useState(false);
     const { user } = useAuth();
+    const { t, lang } = useT();
 
     // Default demo images if user hasn't generated any yet
     const demoMap: Record<string, string> = {
@@ -45,8 +48,9 @@ export default function NewspaperStudioPage({
     const [customHeadline, setCustomHeadline] = useState<string>('');
     const [customSubhead, setCustomSubhead] = useState<string>('');
 
-    const displayHeadline = customHeadline || era.newspaperHeadlineTr;
-    const displaySubhead = customSubhead || era.newspaperSubTr;
+    const et = eraText(era, lang);
+    const displayHeadline = customHeadline || et.headline;
+    const displaySubhead = customSubhead || et.sub;
 
     const travelerName = user?.email ? user.email.split('@')[0].toUpperCase() : 'HİKMET SEYMATA';
     const passportNo = `ZM-${era.yearDisplay.replace(/\D/g, '') || '1920'}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -74,7 +78,7 @@ export default function NewspaperStudioPage({
             playSuccess();
         } catch (err) {
             console.error('Export hatası:', err);
-            alert('Görsel oluşturulurken bir hata oluştu.');
+            alert(t('ns.alertFail'));
         } finally {
             setIsExporting(false);
         }
@@ -91,14 +95,14 @@ export default function NewspaperStudioPage({
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                TARİHİ GAZETE & PASAPORT BASIMEVİ
+                                {t('ns.title')}
                             </h2>
                             <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                                ARŞİV BASKISI
+                                {t('ns.badge')}
                             </span>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Fotoğrafınızı o dönemin 1. sayfa manşet gazetesine veya holografik Zaman Gezgini Pasaportuna dönüştürün.
+                            {t('ns.sub')}
                         </p>
                     </div>
                 </div>
@@ -115,7 +119,7 @@ export default function NewspaperStudioPage({
                             }`}
                         >
                             <span>📰</span>
-                            <span>Tarihi Gazete</span>
+                            <span>{t('ns.modeNewspaper')}</span>
                         </button>
                         <button
                             onClick={() => { playTick(); setMode('passport'); }}
@@ -126,7 +130,7 @@ export default function NewspaperStudioPage({
                             }`}
                         >
                             <span>🛂</span>
-                            <span>Zaman Pasaportu</span>
+                            <span>{t('ns.modePassport')}</span>
                         </button>
                     </div>
 
@@ -136,7 +140,7 @@ export default function NewspaperStudioPage({
                         className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 font-black text-xs shadow-md active:scale-95 transition flex items-center gap-2 cursor-pointer"
                     >
                         <span>{isExporting ? '⏳' : '📥'}</span>
-                        <span>{isExporting ? 'Basılıyor...' : 'Yüksek Kalitede İndir (PNG)'}</span>
+                        <span>{isExporting ? t('ns.printing') : t('ns.download')}</span>
                     </button>
                 </div>
             </div>
@@ -162,7 +166,7 @@ export default function NewspaperStudioPage({
                             }`}
                         >
                             <span>{e.icon}</span>
-                            <span>{e.yearDisplay} {e.titleTr.split('—')[0]}</span>
+                            <span>{eraText(e, lang).year} {eraText(e, lang).title.split('—')[0]}</span>
                             {hasGen && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
                         </button>
                     );
@@ -187,15 +191,15 @@ export default function NewspaperStudioPage({
                             {/* Newspaper Header */}
                             <div className="border-b-4 border-double border-[#2c2416] pb-3 mb-4 text-center">
                                 <div className="text-[10px] tracking-widest uppercase font-mono font-bold text-[#5c4d36] flex justify-between border-b border-[#8c7a5e] pb-1 mb-2">
-                                    <span>SAYI: #{era.yearDisplay.replace(/\D/g, '') || '1920'}</span>
-                                    <span>TARİH: {era.yearDisplay} BASKISI</span>
-                                    <span>FİYAT: 5 KURUŞ</span>
+                                    <span>{t('ns.issue')}{era.yearDisplay.replace(/\D/g, '') || '1920'}</span>
+                                    <span>{t('ns.date')}{et.year}{t('ns.dateTail')}</span>
+                                    <span>{t('ns.price')}</span>
                                 </div>
                                 <h1 className="text-2xl sm:text-4xl font-black tracking-tight font-serif uppercase">
-                                    ZAMAN VE HAKİKAT GAZETESİ
+                                    {t('ns.paper')}
                                 </h1>
                                 <p className="text-[11px] italic text-[#5c4d36] mt-1">
-                                    "Geçmişin yankıları, bugünün ve yarının en büyük pusulasıdır."
+                                    {t('ns.motto')}
                                 </p>
                             </div>
 
@@ -216,25 +220,25 @@ export default function NewspaperStudioPage({
                                     <div className="w-full aspect-square border-2 border-[#2c2416] p-1.5 bg-[#eae0c8] shadow-md">
                                         <img
                                             src={currentPhotoUrl}
-                                            alt={era.titleTr}
+                                            alt={et.title}
                                             className="w-full h-full object-cover grayscale contrast-125 sepia-[0.3]"
                                         />
                                     </div>
                                     <span className="text-[9px] font-mono italic text-[#5c4d36] mt-1.5 text-center">
-                                        Fotoğraf: {travelerName}, {era.yearDisplay}
+                                        {t('ns.photoCredit')}{travelerName}, {et.year}
                                     </span>
                                 </div>
 
                                 {/* Article Text Column */}
                                 <div className="sm:col-span-6 text-justify text-xs leading-relaxed space-y-2.5">
                                     <p className="first-letter:text-3xl first-letter:font-black first-letter:float-left first-letter:mr-1.5 first-letter:text-[#1a140a]">
-                                        {era.historicalFactTr}
+                                        {et.fact}
                                     </p>
                                     <p className="text-[11px] text-[#4a3b25]">
-                                        Dönemin tanıkları, {travelerName} adlı zaman yolcusunun bu çağın en saygın simalarından biri olduğunu ve tarihin akışına bizzat tanıklık ettiğini bildirdi.
+                                        {t('ns.witness', { name: travelerName })}
                                     </p>
                                     <div className="p-2.5 bg-[#e5d8b8] border border-[#a89570] rounded text-[10px] italic">
-                                        <strong>Resmi Arşiv Notu:</strong> Bu belge Zaman Makinesi V4 Krono-Kayıt Dairesi tarafından onaylanmıştır.
+                                        <strong>{t('ns.note')}</strong>{t('ns.noteBody')}
                                     </div>
                                 </div>
                             </div>
@@ -259,12 +263,12 @@ export default function NewspaperStudioPage({
                                             CHRONO BORDER AUTHORITY
                                         </div>
                                         <div className="text-base font-black tracking-tight text-white">
-                                            ZAMAN GEZGİNİ PASAPORTU
+                                            {t('ns.passport')}
                                         </div>
                                     </div>
                                 </div>
                                 <div className="text-right font-mono">
-                                    <div className="text-[9px] text-slate-400">PASAPORT NO</div>
+                                    <div className="text-[9px] text-slate-400">{t('ns.passportNo')}</div>
                                     <div className="text-xs font-black text-amber-400">{passportNo}</div>
                                 </div>
                             </div>
@@ -281,27 +285,27 @@ export default function NewspaperStudioPage({
                                         />
                                     </div>
                                     <div className="absolute -bottom-2 -right-2 bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase border border-white">
-                                        ONAYLANDI
+                                        {t('ns.approved')}
                                     </div>
                                 </div>
 
                                 {/* Identity Data Fields */}
                                 <div className="col-span-7 space-y-2 text-xs">
                                     <div>
-                                        <div className="text-[9px] text-slate-400 font-mono">GEZGİN ADI (TRAVELER)</div>
+                                        <div className="text-[9px] text-slate-400 font-mono">{t('ns.travelerName')}</div>
                                         <div className="font-black text-white text-sm">{travelerName}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] text-slate-400 font-mono">HEDEF ÇAĞ & DÖNEM</div>
-                                        <div className="font-bold text-amber-300">{era.yearDisplay} {era.titleTr}</div>
+                                        <div className="text-[9px] text-slate-400 font-mono">{t('ns.target')}</div>
+                                        <div className="font-bold text-amber-300">{et.year} {et.title}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] text-slate-400 font-mono">YETKİ DERECESİ</div>
-                                        <div className="font-mono text-emerald-400 font-bold">SINIF-A DOKUNULMAZ</div>
+                                        <div className="text-[9px] text-slate-400 font-mono">{t('ns.class')}</div>
+                                        <div className="font-mono text-emerald-400 font-bold">{t('ns.classValue')}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[9px] text-slate-400 font-mono">GÖREV STATÜSÜ</div>
-                                        <div className="text-[11px] text-slate-300">{era.badge}</div>
+                                        <div className="text-[9px] text-slate-400 font-mono">{t('ns.status')}</div>
+                                        <div className="text-[11px] text-slate-300">{et.badge}</div>
                                     </div>
                                 </div>
                             </div>
@@ -320,12 +324,12 @@ export default function NewspaperStudioPage({
                 <div className="w-full lg:w-80 flex flex-col space-y-4">
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <h3 className="text-sm font-black text-white flex items-center gap-2">
-                            <span>✏️</span> Manşet & Yazı Düzenle
+                            <span>✏️</span>{t('ns.editTitle')}
                         </h3>
 
                         <div>
                             <label className="block text-xs font-bold text-slate-300 mb-1">
-                                Ana Manşet Başlığı:
+                                {t('ns.headlineLabel')}
                             </label>
                             <input
                                 type="text"
@@ -337,7 +341,7 @@ export default function NewspaperStudioPage({
 
                         <div>
                             <label className="block text-xs font-bold text-slate-300 mb-1">
-                                Alt Başlık & Açıklama:
+                                {t('ns.subLabel')}
                             </label>
                             <textarea
                                 rows={3}
@@ -355,16 +359,16 @@ export default function NewspaperStudioPage({
                             }}
                             className="text-xs text-amber-400 hover:underline cursor-pointer"
                         >
-                            ↺ Orijinal Tarihi Metne Sıfırla
+                            {t('ns.reset')}
                         </button>
                     </div>
 
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-2 text-xs">
                         <div className="font-bold text-white flex items-center gap-1.5">
-                            <span>💡</span> İpucu
+                            <span>💡</span>{t('ns.tip')}
                         </div>
                         <p className="text-slate-400 text-[11px] leading-relaxed">
-                            Yüksek çözünürlüklü PNG çıktısını doğrudan indirip poster olarak bastırabilir veya sosyal medyada hikaye olarak paylaşabilirsiniz.
+                            {t('ns.tipBody')}
                         </p>
                     </div>
                 </div>

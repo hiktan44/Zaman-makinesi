@@ -2,10 +2,25 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { type Lang } from './use-lang';
+import { APP_DICT } from './dict/app';
+import { STUDIO_DICT } from './dict/studio';
+import { ADMIN_DICT } from './dict/admin';
+import { MISC_DICT } from './dict/misc';
+
+export type Lang = 'tr' | 'en';
+
+export type Entry = { tr: string; en: string };
+
+// Geçerli dil: React dışı kodlar (alert, canvas, servis hataları) için.
+// use-lang.ts tarafından güncellenir.
+let currentLang: Lang = 'tr';
+export const getLang = (): Lang => currentLang;
+export const setCurrentLang = (lang: Lang): void => {
+  currentLang = lang;
+};
 
 // Translation dictionary
-export const DICT: Record<string, { tr: string; en: string }> = {
+const BASE_DICT: Record<string, Entry> = {
   // Navigation & Header
   'nav.title': { tr: 'Zaman Makinesi Fotoğrafları', en: 'Time Machine Photos' },
   'nav.gallery': { tr: 'Galeri', en: 'Gallery' },
@@ -125,22 +140,41 @@ export const DICT: Record<string, { tr: string; en: string }> = {
   'lang.switch': { tr: 'EN', en: 'TR' },
 };
 
-// Translation function
-export const t = (key: string, lang: Lang, vars?: Record<string, string | number>): string => {
+export const DICT: Record<string, Entry> = {
+  ...BASE_DICT,
+  ...APP_DICT,
+  ...STUDIO_DICT,
+  ...ADMIN_DICT,
+  ...MISC_DICT,
+};
+
+/** index.html alt bilgisindeki yasal sayfa bağlantıları: Türkçe adres -> İngilizce adres. */
+export const LEGAL_LINKS: Record<string, { key: string; en: string }> = {
+  '/gizlilik.html': { key: 'legal.privacy', en: '/en/privacy/' },
+  '/kullanim-kosullari.html': { key: 'legal.terms', en: '/en/terms/' },
+  '/cerez-politikasi.html': { key: 'legal.cookies', en: '/en/cookies/' },
+  '/iletisim.html': { key: 'legal.contact', en: '/en/contact/' },
+};
+
+// Translation function. Dil verilmezse geçerli (modül düzeyi) dil kullanılır.
+export const t = (key: string, lang?: Lang, vars?: Record<string, string | number>): string => {
   const entry = DICT[key];
   if (!entry) {
     console.warn(`Missing translation key: ${key}`);
     return key;
   }
 
-  let text = entry[lang] || entry.tr; // Fallback to Turkish
+  let text = entry[lang ?? currentLang] || entry.tr; // Fallback to Turkish
 
-  // Variable substitution
+  // Variable substitution (her yer tutucu, tüm geçişleri)
   if (vars) {
     Object.entries(vars).forEach(([varKey, value]) => {
-      text = text.replace(`{${varKey}}`, String(value));
+      text = text.split(`{${varKey}}`).join(String(value));
     });
   }
 
   return text;
 };
+
+/** Dile göre iki değerden birini seçer. */
+export const pickByLang = <T,>(lang: Lang, tr: T, en: T): T => (lang === 'tr' ? tr : en);

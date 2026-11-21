@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePayment } from '../contexts/PaymentContext';
 import { getCustomApiKeys, saveCustomApiKeys } from '../services/geminiService';
 import { playTick, playSuccess, playWarp } from '../lib/sfxUtils';
+import { useT } from '../lib/useT';
 
 interface AdminPanelProps {
     isOpen: boolean;
@@ -26,6 +27,7 @@ interface AdminPanelProps {
 export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     const { user, isAdmin } = useAuth();
     const { credits, addCredits } = usePayment();
+    const { t } = useT();
 
     const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'purchases' | 'logs' | 'settings'>('overview');
     const [usersList, setUsersList] = useState<ManagedUser[]>([]);
@@ -65,7 +67,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
             updateUserCredits(user.email, credits + amount);
             setUsersList(getAdminUsers());
         }
-        showToast(`⚡ Hesabınıza +${amount} Plütonyum Kredisi yüklendi!`);
+        showToast(t('ad.toastAdd', { n: amount }));
     };
 
     // User credit adjustment
@@ -80,13 +82,13 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         });
         setUsersList(updated);
         saveAdminUsers(updated);
-        showToast(`${email} kullanıcısına ${delta > 0 ? '+' : ''}${delta} kredi güncellendi.`);
+        showToast(t('ad.toastUser', { email, d: `${delta > 0 ? '+' : ''}${delta}` }));
     };
 
     const handleSaveApiKeys = () => {
         playSuccess();
         saveCustomApiKeys(geminiKeyInput, kieKeyInput);
-        showToast('API Anahtarları başarıyla kaydedildi!');
+        showToast(t('ad.toastKeys'));
     };
 
     // Filtered users
@@ -125,14 +127,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                                    ZAMAN MAKİNESİ — YÖNETİM PANELİ
+                                    {t('ad.title')}
                                 </h2>
                                 <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
                                     SUPER ADMIN
                                 </span>
                             </div>
                             <p className="text-xs text-slate-400 font-mono">
-                                Giriş: <span className="text-amber-300 font-bold">{user?.email || 'hikmet044@gmail.com'}</span> | Sistem Durumu: <span className="text-emerald-400 font-bold">● Çevrimiçi</span>
+                                {t('ad.loginLabel')}<span className="text-amber-300 font-bold">{user?.email || 'hikmet044@gmail.com'}</span>{t('ad.sysStatus')}<span className="text-emerald-400 font-bold">{t('ad.online')}</span>
                             </p>
                         </div>
                     </div>
@@ -144,7 +146,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                             className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black text-xs shadow-md hover:brightness-110 active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
                         >
                             <span>⚡</span>
-                            <span>Kendime +1000 Kredi Yükle</span>
+                            <span>{t('ad.selfCredit')}</span>
                             <span className="bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded text-[10px] font-mono">
                                 ({credits})
                             </span>
@@ -170,7 +172,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         }`}
                     >
                         <span>📊</span>
-                        <span>Genel Bakış</span>
+                        <span>{t('ad.tabOverview')}</span>
                     </button>
                     <button
                         onClick={() => { playTick(); setActiveTab('users'); }}
@@ -181,7 +183,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         }`}
                     >
                         <span>👥</span>
-                        <span>Kullanıcılar ({usersList.length})</span>
+                        <span>{t('ad.tabUsers', { n: usersList.length })}</span>
                     </button>
                     <button
                         onClick={() => { playTick(); setActiveTab('purchases'); }}
@@ -192,7 +194,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         }`}
                     >
                         <span>💳</span>
-                        <span>Satın Alımlar & Gelir (₺{totalRevenue})</span>
+                        <span>{t('ad.tabPurchases', { n: totalRevenue })}</span>
                     </button>
                     <button
                         onClick={() => { playTick(); setActiveTab('logs'); }}
@@ -203,7 +205,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         }`}
                     >
                         <span>📜</span>
-                        <span>Canlı Sistem Logları ({logsList.length})</span>
+                        <span>{t('ad.tabLogs', { n: logsList.length })}</span>
                     </button>
                     <button
                         onClick={() => { playTick(); setActiveTab('settings'); }}
@@ -214,7 +216,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         }`}
                     >
                         <span>⚙️</span>
-                        <span>API & Model Ayarları</span>
+                        <span>{t('ad.tabSettings')}</span>
                     </button>
                 </div>
 
@@ -227,24 +229,24 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                             {/* KPI Cards Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-2">
-                                    <div className="text-xs font-bold text-slate-400">Toplam Kullanıcı</div>
+                                    <div className="text-xs font-bold text-slate-400">{t('ad.kpiUsers')}</div>
                                     <div className="text-3xl font-black text-white font-mono">{usersList.length}</div>
-                                    <div className="text-[11px] text-emerald-400">● 5 Aktif Üye</div>
+                                    <div className="text-[11px] text-emerald-400">{t('ad.kpiActive')}</div>
                                 </div>
                                 <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-2">
-                                    <div className="text-xs font-bold text-slate-400">Toplam Zaman Sıçraması</div>
+                                    <div className="text-xs font-bold text-slate-400">{t('ad.kpiJumps')}</div>
                                     <div className="text-3xl font-black text-amber-400 font-mono">{totalGenerationsCount}</div>
-                                    <div className="text-[11px] text-slate-400">Üretilen Fotoğraf / Klip</div>
+                                    <div className="text-[11px] text-slate-400">{t('ad.kpiJumpsSub')}</div>
                                 </div>
                                 <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-2">
-                                    <div className="text-xs font-bold text-slate-400">Toplam Paket Satış Geliri</div>
-                                    <div className="text-3xl font-black text-emerald-400 font-mono">₺{totalRevenue},00</div>
+                                    <div className="text-xs font-bold text-slate-400">{t('ad.kpiRevenue')}</div>
+                                    <div className="text-3xl font-black text-emerald-400 font-mono">{t('ad.kpiRevenueVal', { n: totalRevenue })}</div>
                                     <div className="text-[11px] text-slate-400">Stripe & Apple Pay</div>
                                 </div>
                                 <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-2">
-                                    <div className="text-xs font-bold text-slate-400">Admin Kredi Bakiyesi</div>
+                                    <div className="text-xs font-bold text-slate-400">{t('ad.kpiBalance')}</div>
                                     <div className="text-3xl font-black text-cyan-400 font-mono">{credits} ⚡</div>
-                                    <div className="text-[11px] text-amber-300 font-bold">Sınırsız Yenileme Yetkisi</div>
+                                    <div className="text-[11px] text-amber-300 font-bold">{t('ad.kpiRenew')}</div>
                                 </div>
                             </div>
 
@@ -252,13 +254,13 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                             <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-black text-white flex items-center gap-2">
-                                        <span>⚡</span> Son Canlı Üretimler ve Sıçramalar
+                                        <span>⚡</span>{t('ad.recent')}
                                     </h3>
                                     <button
                                         onClick={() => setActiveTab('logs')}
                                         className="text-xs font-bold text-amber-400 hover:underline"
                                     >
-                                        Tüm Logları Gör →
+                                        {t('ad.allLogs')}
                                     </button>
                                 </div>
 
@@ -266,11 +268,11 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                     <table className="w-full text-left text-xs">
                                         <thead>
                                             <tr className="border-b border-slate-800 text-slate-400 font-mono">
-                                                <th className="pb-3">Zaman</th>
-                                                <th className="pb-3">Kullanıcı</th>
-                                                <th className="pb-3">İşlem & Çağ</th>
-                                                <th className="pb-3">Kredi</th>
-                                                <th className="pb-3">Durum</th>
+                                                <th className="pb-3">{t('ad.thTime')}</th>
+                                                <th className="pb-3">{t('ad.thUser')}</th>
+                                                <th className="pb-3">{t('ad.thAction')}</th>
+                                                <th className="pb-3">{t('ad.thCredit')}</th>
+                                                <th className="pb-3">{t('ad.thStatus')}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -300,13 +302,13 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <input
                                     type="text"
-                                    placeholder="Kullanıcı ara (email veya isim)..."
+                                    placeholder={t('ad.searchPh')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-400 w-72"
                                 />
                                 <div className="text-xs text-slate-400">
-                                    Toplam: <strong className="text-white">{filteredUsers.length}</strong> Kullanıcı
+                                    {t('ad.total')}<strong className="text-white">{filteredUsers.length}</strong>{t('ad.totalUsersTail')}
                                 </div>
                             </div>
 
@@ -314,13 +316,13 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 <table className="w-full text-left text-xs">
                                     <thead>
                                         <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 font-mono">
-                                            <th className="p-3.5">Kullanıcı / E-posta</th>
-                                            <th className="p-3.5">Rol</th>
-                                            <th className="p-3.5">Kayıt Tarihi</th>
-                                            <th className="p-3.5">Kalan Kredi</th>
-                                            <th className="p-3.5">Üretim</th>
-                                            <th className="p-3.5">Harcama</th>
-                                            <th className="p-3.5 text-right">Kredi Yönetimi</th>
+                                            <th className="p-3.5">{t('ad.thUserEmail')}</th>
+                                            <th className="p-3.5">{t('ad.thRole')}</th>
+                                            <th className="p-3.5">{t('ad.thJoined')}</th>
+                                            <th className="p-3.5">{t('ad.thRemaining')}</th>
+                                            <th className="p-3.5">{t('ad.thGenerated')}</th>
+                                            <th className="p-3.5">{t('ad.thSpent')}</th>
+                                            <th className="p-3.5 text-right">{t('ad.thManage')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-800/60">
@@ -343,7 +345,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                                 <td className="p-3.5 font-mono font-black text-amber-400 text-sm">
                                                     {u.credits} ⚡
                                                 </td>
-                                                <td className="p-3.5 font-mono text-slate-300">{u.totalGenerations} adet</td>
+                                                <td className="p-3.5 font-mono text-slate-300">{t('ad.gen', { n: u.totalGenerations })}</td>
                                                 <td className="p-3.5 font-mono text-emerald-400">₺{u.totalSpentTl}</td>
                                                 <td className="p-3.5 text-right">
                                                     <div className="inline-flex items-center gap-1.5">
@@ -380,10 +382,10 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <div className="text-xs text-slate-400">
-                                    Tamamlanan Siparişler: <strong className="text-white">{purchasesList.length}</strong>
+                                    {t('ad.orders')}<strong className="text-white">{purchasesList.length}</strong>
                                 </div>
                                 <div className="text-sm font-bold text-emerald-400">
-                                    Toplam Gelir: ₺{totalRevenue},00
+                                    {t('ad.revenue', { n: totalRevenue })}
                                 </div>
                             </div>
 
@@ -391,14 +393,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 <table className="w-full text-left text-xs">
                                     <thead>
                                         <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 font-mono">
-                                            <th className="p-3.5">Sipariş No</th>
-                                            <th className="p-3.5">Müşteri</th>
-                                            <th className="p-3.5">Paket</th>
-                                            <th className="p-3.5">Kredi</th>
-                                            <th className="p-3.5">Tutar</th>
-                                            <th className="p-3.5">Ödeme Yöntemi</th>
-                                            <th className="p-3.5">Tarih</th>
-                                            <th className="p-3.5">Durum</th>
+                                            <th className="p-3.5">{t('ad.thOrderNo')}</th>
+                                            <th className="p-3.5">{t('ad.thCustomer')}</th>
+                                            <th className="p-3.5">{t('ad.thPackage')}</th>
+                                            <th className="p-3.5">{t('ad.thCredit')}</th>
+                                            <th className="p-3.5">{t('ad.thAmount')}</th>
+                                            <th className="p-3.5">{t('ad.thPayment')}</th>
+                                            <th className="p-3.5">{t('ad.thDate')}</th>
+                                            <th className="p-3.5">{t('ad.thStatus')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-800/60">
@@ -447,14 +449,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 <table className="w-full text-left text-xs font-mono">
                                     <thead>
                                         <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400">
-                                            <th className="p-3.5">Zaman Damgası</th>
-                                            <th className="p-3.5">Kullanıcı</th>
-                                            <th className="p-3.5">İşlem Türü</th>
-                                            <th className="p-3.5">Çağ / Başlık</th>
-                                            <th className="p-3.5">Harcanan</th>
-                                            <th className="p-3.5">Gecikme</th>
-                                            <th className="p-3.5">Teknik Detay</th>
-                                            <th className="p-3.5">Durum</th>
+                                            <th className="p-3.5">{t('ad.thTimestamp')}</th>
+                                            <th className="p-3.5">{t('ad.thUser')}</th>
+                                            <th className="p-3.5">{t('ad.thType')}</th>
+                                            <th className="p-3.5">{t('ad.thEra')}</th>
+                                            <th className="p-3.5">{t('ad.thSpentCr')}</th>
+                                            <th className="p-3.5">{t('ad.thLatency')}</th>
+                                            <th className="p-3.5">{t('ad.thDetail')}</th>
+                                            <th className="p-3.5">{t('ad.thStatus')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-800/60">
@@ -486,16 +488,16 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                             {/* API Keys Configuration Box */}
                             <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-4">
                                 <h3 className="text-sm font-black text-white flex items-center gap-2">
-                                    <span>🔑</span> Özel API Anahtarları (Admin Canlı Yapılandırma)
+                                    <span>🔑</span>{t('ad.keysTitle')}
                                 </h3>
                                 <p className="text-xs text-slate-400">
-                                    Sunucu ortam değişkenlerini değiştirmeden tarayıcınızdan doğrudan kendi API anahtarınızı tanımlayabilirsiniz.
+                                    {t('ad.keysDesc')}
                                 </p>
 
                                 <div className="space-y-3 pt-2">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-300 mb-1">
-                                            Kie.ai API Key (Seedance 5 — 10:1 Maliyet Avantajı)
+                                            {t('ad.kie')}
                                         </label>
                                         <input
                                             type="password"
@@ -524,7 +526,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                         className="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2"
                                     >
                                         <span>💾</span>
-                                        <span>API Anahtarlarını Kaydet</span>
+                                        <span>{t('ad.saveKeys')}</span>
                                     </button>
                                 </div>
                             </div>
@@ -532,20 +534,20 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                             {/* Credit Rates */}
                             <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-4">
                                 <h3 className="text-sm font-black text-white flex items-center gap-2">
-                                    <span>⚡</span> Kredi & Harcama Maliyetleri
+                                    <span>⚡</span>{t('ad.ratesTitle')}
                                 </h3>
                                 <div className="space-y-2 text-xs">
                                     <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950">
-                                        <span>Tek Fotoğraf Zaman Sıçraması:</span>
-                                        <strong className="font-mono text-amber-400">1 Kredi</strong>
+                                        <span>{t('ad.rate1')}</span>
+                                        <strong className="font-mono text-amber-400">{t('ad.oneCr')}</strong>
                                     </div>
                                     <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950">
-                                        <span>Tarihi Gazete & Pasaport Çıktısı:</span>
-                                        <strong className="font-mono text-amber-400">1 Kredi</strong>
+                                        <span>{t('ad.rate2')}</span>
+                                        <strong className="font-mono text-amber-400">{t('ad.oneCr')}</strong>
                                     </div>
                                     <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950">
-                                        <span>9:16 Video Morph Timelapse Klip:</span>
-                                        <strong className="font-mono text-amber-400">5 Kredi</strong>
+                                        <span>{t('ad.rate3')}</span>
+                                        <strong className="font-mono text-amber-400">{t('ad.fiveCr')}</strong>
                                     </div>
                                 </div>
                             </div>

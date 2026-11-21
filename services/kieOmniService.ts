@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { getCustomApiKeys, saveCustomApiKeys } from './geminiService';
+import { t } from '../lib/i18n';
 
 export interface KieOmniVideoRequest {
     image: string; // Base64 data URL or Image URL
@@ -48,7 +49,7 @@ export async function generateKieOmniVideo(request: KieOmniVideoRequest): Promis
     if (!activeKey) {
         return {
             status: 'FAILED',
-            message: 'Kie.ai API Anahtarı bulunamadı. Lütfen anahtarınızı girin.'
+            message: t('kie.noKey')
         };
     }
 
@@ -131,6 +132,6 @@ export async function generateKieOmniVideo(request: KieOmniVideoRequest): Promis
 
     return {
         status: 'FAILED',
-        message: 'Kie.ai Google Omni video oluşturma tamamlanamadı.'
+        message: t('kie.incomplete')
     };
 }

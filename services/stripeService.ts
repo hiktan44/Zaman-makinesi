@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { t, type Lang } from '../lib/i18n';
 
 const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
 
@@ -23,7 +24,7 @@ export async function createCheckoutSession(
     const stripe = await getStripe();
 
     if (!stripe) {
-        throw new Error('Stripe yüklenemedi. Lütfen sayfayı yenileyin.');
+        throw new Error(t('stripe.loadError'));
     }
 
     try {
@@ -102,6 +103,16 @@ export const PRICING_PACKAGES = [
         ]
     }
 ];
+
+/** Paket adı / rozeti / özelliklerini dile göre döndürür (tr: yukarıdaki metinler aynen). */
+export const getPackageText = (pkg: (typeof PRICING_PACKAGES)[number], lang: Lang) => {
+    if (lang === 'tr') return { name: pkg.name, badge: pkg.badge, features: pkg.features };
+    return {
+        name: t(`pkg.${pkg.id}.name`, lang),
+        badge: t(`pkg.${pkg.id}.badge`, lang),
+        features: pkg.features.map((_, i) => t(`pkg.${pkg.id}.f${i}`, lang)),
+    };
+};
 
 export const PRICING_TIERS = {
     FREE: {

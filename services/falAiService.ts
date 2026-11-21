@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { getCustomApiKeys } from './geminiService';
+import { t } from '../lib/i18n';
 
 export interface FalAiVideoRequest {
     image: string; // Base64 data URL or remote image URL
@@ -101,7 +102,7 @@ export async function generateFalAiVideo(request: FalAiVideoRequest): Promise<Fa
     if (!falKey) {
         return {
             status: 'FAILED',
-            message: 'Fal.ai API Anahtarı (FAL_KEY) bulunamadı. Lütfen anahtarınızı girin.'
+            message: t('fal.noKey')
         };
     }
 
@@ -110,7 +111,7 @@ export async function generateFalAiVideo(request: FalAiVideoRequest): Promise<Fa
     const targetModel = request.model || 'fal-ai/veo-2';
 
     try {
-        request.onProgress?.('[1/3] Fotoğraf hazırlanıyor ve Fal.ai modeline gönderiliyor...');
+        request.onProgress?.(t('fal.p1'));
         const imageUrl = await uploadToFalStorage(request.image, falKey);
 
         console.log(`[Fal.ai] Model çağrılıyor: ${targetModel}`);
@@ -138,7 +139,7 @@ export async function generateFalAiVideo(request: FalAiVideoRequest): Promise<Fa
 
         if (!submitRes.ok) {
             const errText = await submitRes.text();
-            throw new Error(`Fal.ai Kuyruk Hatası (${submitRes.status}): ${errText}`);
+            throw new Error(t('fal.queueErr', undefined, { status: submitRes.status, text: errText }));
         }
 
         const submitData = await submitRes.json();
@@ -147,7 +148,7 @@ export async function generateFalAiVideo(request: FalAiVideoRequest): Promise<Fa
         const statusUrl = submitData.status_url || `https://queue.fal.run/${targetModel}/requests/${requestId}/status`;
 
         console.log(`[Fal.ai] İşlem kuyruğa alındı (Request ID: ${requestId}).`);
-        request.onProgress?.(`[2/3] Model çalışıyor (Kuyruk ID: ${requestId.substring(0, 8)}...)...`);
+        request.onProgress?.(t('fal.p2', undefined, { id: requestId.substring(0, 8) }));
 
         // 2. Poll Status until completed (max 120 seconds)
         const startTime = Date.now();
@@ -169,12 +170,12 @@ export async function generateFalAiVideo(request: FalAiVideoRequest): Promise<Fa
             console.log(`[Fal.ai] Durum: ${status} (Yoklama: ${pollCount})`);
 
             if (status === 'IN_QUEUE') {
-                request.onProgress?.(`[2/3] Sırada bekleniyor (Sıra pozisyonu: ${pollData.queue_position || 'Öncelikli'})...`);
+                request.onProgress?.(t('fal.queue', undefined, { pos: pollData.queue_position || t('fal.priority') }));
             } else if (status === 'IN_PROGRESS') {
                 const logs = pollData.logs?.map((l: any) => l.message).join(' ') || '';
-                request.onProgress?.(`[2/3] AI Canlı Kareleri ve Kıyafet Dönüşümünü İşliyor (${pollCount * 3}s)...`);
+                request.onProgress?.(t('fal.working', undefined, { s: pollCount * 3 }));
             } else if (status === 'COMPLETED') {
-                request.onProgress?.('[3/3] Video tamamlandı, indiriliyor...');
+                request.onProgress?.(t('fal.done'));
                 
                 // Fetch final result
                 const resultRes = await fetch(responseUrl, {
@@ -190,20 +191,20 @@ export async function generateFalAiVideo(request: FalAiVideoRequest): Promise<Fa
                 }
                 break;
             } else if (status === 'FAILED') {
-                throw new Error(`Fal.ai işlemi başarısız oldu: ${pollData.error || pollData.message || 'Bilinmeyen hata'}`);
+                throw new Error(t('fal.failedWith', undefined, { reason: pollData.error || pollData.message || t('fal.unknown') }));
             }
         }
 
         return {
             status: 'PROCESSING',
             requestId: requestId,
-            message: 'Fal.ai işlemi zaman aşımına uğradı veya devam ediyor.'
+            message: t('fal.timeout')
         };
     } catch (err: any) {
         console.warn('[Fal.ai] Video üretim hatası:', err);
         return {
             status: 'FAILED',
-            message: err.message || 'Fal.ai API çağrısı sırasında bir hata oluştu.'
+            message: err.message || t('fal.callErr')
         };
     }
 }

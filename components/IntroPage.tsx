@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { useT } from '../lib/useT';
 import Header from './Header';
 import { ERAS } from '../constants/eraConstants';
+import { eraText } from '../constants/eraDisplay';
 import { playTick, playWarp } from '../lib/sfxUtils';
 
 interface IntroPageProps {
@@ -16,7 +17,7 @@ interface IntroPageProps {
 }
 
 export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAdmin }: IntroPageProps) {
-    const { t } = useT();
+    const { t, lang } = useT();
 
     // Interactive Before/After slider state
     const [sliderPos, setSliderPos] = useState<number>(50);
@@ -25,44 +26,44 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
 
     const demoEras = [
         {
-            title: '1920’ler — Great Gatsby',
+            title: t('ip.demo1.title'),
             year: '1925',
-            badge: 'Caz Çağı',
+            badge: t('ip.demo1.badge'),
             icon: '🎷',
             afterImg: '/images/demo-gatsby.jpg',
-            fact: 'Pinstripe zarafet, şampanya kadehleri, art-deco speakeasy balosu ve inci saç bandı.'
+            fact: t('ip.demo1.fact')
         },
         {
-            title: '1550 — Osmanlı Saray Sultanı',
+            title: t('ip.demo2.title'),
             year: '1550',
-            badge: 'Topkapı Sarayı',
+            badge: t('ip.demo2.badge'),
             icon: '👑',
             afterImg: '/images/demo-ottoman.jpg',
-            fact: 'Altın işlemeli zümrüt kadife kaftan, mücevherli saray tacı ve İznik çinili kemerli avlu.'
+            fact: t('ip.demo2.fact')
         },
         {
-            title: '2077 — Cyberpunk Neo-İstanbul',
+            title: t('ip.demo3.title'),
             year: '2077',
-            badge: 'Sibernetik İmplant',
+            badge: t('ip.demo3.badge'),
             icon: '🤖',
             afterImg: '/images/demo-cyberpunk.jpg',
-            fact: 'Işıldayan nöral şakak devreleri, holografik neon yaka ve yağmurlu siber gökdelenler.'
+            fact: t('ip.demo3.fact')
         },
         {
-            title: 'M.Ö. 1350 — Antik Mısır Kraliçesi',
-            year: 'M.Ö. 1350',
-            badge: 'Nil Krallığı',
+            title: t('ip.demo4.title'),
+            year: t('ip.demo4.year'),
+            badge: t('ip.demo4.badge'),
             icon: '🏺',
             afterImg: '/images/demo-egypt.jpg',
-            fact: 'Lapis lazuli ve altın Nemes tacı, turkuaz geniş gerdanlık ve hiyeroglifli taş tapınak.'
+            fact: t('ip.demo4.fact')
         },
         {
-            title: '1885 — Vahşi Batı Şerifi',
+            title: t('ip.demo5.title'),
             year: '1885',
-            badge: 'Frontier Kovboyu',
+            badge: t('ip.demo5.badge'),
             icon: '🤠',
             afterImg: '/images/demo-west.jpg',
-            fact: 'Tozlu deri trençkot, gümüş şerif yıldızı, kovboy şapkası ve batı kasabası boardwalk.'
+            fact: t('ip.demo5.fact')
         }
     ];
 
@@ -70,20 +71,20 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
 
     const faqs = [
         {
-            q: 'Zaman Makinesi yüz benzerliğimi nasıl koruyor?',
-            a: 'Gelişmiş yüz tanıma ve yüz koruma (Face-Fidelity) algoritmalarımız sayesinde göz, burun, çene ve bakış yapınız birebir korunurken; kıyafetleriniz, saç stiliniz, ışıklandırma ve fotoğraf dokusu seçtiğiniz tarihi döneme kusursuzca uyarlanır.'
+            q: t('ip.faq1.q'),
+            a: t('ip.faq1.a')
         },
         {
-            q: 'Ücretsiz deneme yapabilir miyim?',
-            a: 'Evet! Google ile giriş yapan her yeni kullanıcıya anında 5 Ücretsiz Plütonyum Kredisi tanımlanır. İstediğiniz 5 farklı çağa anında ücretsiz seyahat edebilirsiniz.'
+            q: t('ip.faq2.q'),
+            a: t('ip.faq2.a')
         },
         {
-            q: 'Tarihi Gazete ve Zaman Pasaportu çıktısı nedir?',
-            a: 'Ürettiğiniz her dönem portresi için o yılın gerçek tarihi manşetini (örneğin 1923 Cumhuriyet ilanı veya 1969 Ay’a iniş) içeren sararmış antika gazete sayfası ve Zaman Bakanlığı onaylı seyahat pasaportu oluşturup yüksek çözünürlüklü PNG ve PDF olarak indirebilirsiniz.'
+            q: t('ip.faq3.q'),
+            a: t('ip.faq3.a')
         },
         {
-            q: '9:16 Video Klip (Timelapse) nasıl çalışır?',
-            a: 'Orijinal fotoğrafınızdan başlayıp geçmiş ve gelecekteki tüm çağlarınıza akıcı bir geçiş (morph) yapan dikey reels/TikTok videosu oluşturur. Sosyal medyada paylaşmaya hazır tek tıkla indirilir.'
+            q: t('ip.faq4.q'),
+            a: t('ip.faq4.a')
         }
     ];
 
@@ -115,17 +116,17 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                             <div className="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/10 border border-amber-500/30 px-4 py-1.5 rounded-full shadow-lg shadow-amber-500/10 backdrop-blur-md animate-pulse">
                                 <span className="text-amber-400 text-sm">⚡</span>
                                 <span className="text-xs font-black tracking-wider text-amber-300 uppercase">
-                                    V4 FLUX — YENİ NESİL ZAMAN YOLCULUĞU
+                                    {t('ip.hero.badge')}
                                 </span>
                             </div>
 
                             {/* Main Title */}
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.1]">
-                                Kendinizi <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500">Tarihin ve Geleceğin</span> İçinde Görün.
+                                {t('ip.hero.title1')}<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500">{t('ip.hero.title2')}</span>{t('ip.hero.title3')}
                             </h1>
 
                             <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-xl">
-                                Tek bir portrenizi yükleyin; <strong>Osmanlı Sarayı'ndan 1920 Gatsby Caz Kulübü'ne, Antik Mısır'dan 2077 Cyberpunk Şehrine</strong> kadar 30+ farklı çağda yüz hatlarınız bozulmadan zamanda sıçrayın.
+                                {t('ip.hero.p1')}<strong>{t('ip.hero.p2')}</strong>{t('ip.hero.p3')}
                             </p>
 
                             {/* CTA Button & Fuel Bonus */}
@@ -134,15 +135,15 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                                     onClick={() => { playWarp(); onStart(); }}
                                     className="px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 font-black text-base md:text-lg shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer group"
                                 >
-                                    <span>🚀 ZAMAN KOKPİTİNİ ÇALIŞTIR</span>
+                                    <span>{t('ip.cta.launch')}</span>
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </button>
 
                                 <div className="flex items-center gap-2.5 bg-slate-900/90 border border-slate-800 px-4 py-3 rounded-2xl">
                                     <span className="text-2xl">🎁</span>
                                     <div className="text-left">
-                                        <div className="text-xs font-black text-amber-400">5 Ücretsiz Sıçrama</div>
-                                        <div className="text-[10px] text-slate-400">Giriş yap ve hemen dene</div>
+                                        <div className="text-xs font-black text-amber-400">{t('ip.bonus.title')}</div>
+                                        <div className="text-[10px] text-slate-400">{t('ip.bonus.sub')}</div>
                                     </div>
                                 </div>
                             </div>
@@ -151,15 +152,15 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                             <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-800/80 w-full">
                                 <div>
                                     <div className="text-2xl font-black text-white font-mono">30+</div>
-                                    <div className="text-xs text-slate-400">Tarihi & Siber Çağ</div>
+                                    <div className="text-xs text-slate-400">{t('ip.proof.eras')}</div>
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-black text-amber-400 font-mono">3 Saniye</div>
-                                    <div className="text-xs text-slate-400">Hızlı AI Motoru</div>
+                                    <div className="text-2xl font-black text-amber-400 font-mono">{t('ip.proof.speed')}</div>
+                                    <div className="text-xs text-slate-400">{t('ip.proof.speedLabel')}</div>
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-black text-cyan-400 font-mono">%100</div>
-                                    <div className="text-xs text-slate-400">Yüz Benzerliği</div>
+                                    <div className="text-2xl font-black text-cyan-400 font-mono">{t('ip.proof.likenessVal')}</div>
+                                    <div className="text-xs text-slate-400">{t('ip.proof.likeness')}</div>
                                 </div>
                             </div>
                         </div>
@@ -205,7 +206,7 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                                         style={{ width: '100%', height: '100%', minWidth: '380px' }}
                                     />
                                     <div className="absolute top-4 left-4 bg-slate-950/85 backdrop-blur-md text-slate-200 border border-slate-700 px-3 py-1 rounded-full text-xs font-bold shadow-md">
-                                        📷 Orijinal Portre
+                                        {t('ip.original')}
                                     </div>
                                 </div>
 
@@ -240,7 +241,7 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                                         {currentDemo.fact}
                                     </span>
                                     <span className="text-amber-400 font-bold font-mono shrink-0 ml-2">
-                                        ◀ Kaydırın ▶
+                                        {t('ip.slide')}
                                     </span>
                                 </div>
                             </div>
@@ -252,13 +253,13 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                 <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center space-y-4 mb-14">
                         <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 rounded-full text-amber-400 text-xs font-black uppercase">
-                            ✨ ÇIĞIR AÇAN ÖZELLİKLER
+                            {t('ip.feat.badge')}
                         </div>
                         <h2 className="text-3xl sm:text-4xl font-black text-white">
-                            Basit Bir Filtre Değil, <span className="text-amber-400">Eksiksiz Bir Zaman Makinesi</span>
+                            {t('ip.feat.title1')}<span className="text-amber-400">{t('ip.feat.title2')}</span>
                         </h2>
                         <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto">
-                            Tarihi gazete baskısından TikTok timelapse videolarına, DeLorean ses efektlerinden çoklu çağ seçimine kadar hepsi elinizin altında.
+                            {t('ip.feat.sub')}
                         </p>
                     </div>
 
@@ -270,10 +271,10 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                                     ⚡
                                 </div>
                                 <h3 className="text-xl font-bold text-white group-hover:text-amber-300 transition">
-                                    DeLorean LED Zaman Devreleri & SFX
+                                    {t('ip.f1.title')}
                                 </h3>
                                 <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
-                                    Geleceğe Dönüş filmindeki gibi çalışan hedef, şimdiki zaman ve ayrılış LED göstergeleri ve tarayıcıda üretilen mekanik kadran sesleri.
+                                    {t('ip.f1.desc')}
                                 </p>
                             </div>
                             <div className="mt-6 rounded-2xl bg-black/60 p-3 border border-slate-800 font-mono text-xs flex items-center justify-between text-amber-400">
@@ -289,10 +290,10 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                                     🗞️
                                 </div>
                                 <h3 className="text-xl font-bold text-white group-hover:text-cyan-300 transition">
-                                    Tarihi Gazete & Zaman Pasaportu
+                                    {t('ip.f2.title')}
                                 </h3>
                                 <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
-                                    Gittiğiniz çağın gerçek tarihi manşetleriyle sararmış antika gazete küpürü veya Zaman Bakanlığı onaylı dijital pasaport çıktısı alın.
+                                    {t('ip.f2.desc')}
                                 </p>
                             </div>
                             <div className="mt-6 rounded-2xl bg-black/60 p-3 border border-slate-800 text-xs flex items-center justify-between text-slate-300">
@@ -308,10 +309,10 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                                     🎬
                                 </div>
                                 <h3 className="text-xl font-bold text-white group-hover:text-purple-300 transition">
-                                    9:16 Reels & TikTok Video Klip
+                                    {t('ip.f3.title')}
                                 </h3>
                                 <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
-                                    Orijinal fotoğrafınızdan tüm çağlara akıcı bir yüz morph timelapse geçişi. Sosyal medyada viral olacak formatta anında hazır.
+                                    {t('ip.f3.desc')}
                                 </p>
                             </div>
                             <div className="mt-6 rounded-2xl bg-black/60 p-3 border border-slate-800 text-xs flex items-center justify-between text-purple-300">
@@ -327,23 +328,25 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                     <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
                         <div>
                             <div className="text-amber-400 text-xs font-black uppercase tracking-wider mb-2">
-                                🌌 GENİŞ EVREN KATALOĞU
+                                {t('ip.cat.badge')}
                             </div>
                             <h2 className="text-2xl sm:text-3xl font-black text-white">
-                                30+ Zengin Tarih ve Gelecek Portalı
+                                {t('ip.cat.title')}
                             </h2>
                         </div>
                         <button
                             onClick={() => { playTick(); onStart(); }}
                             className="text-xs font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1 cursor-pointer"
                         >
-                            <span>Tüm Portalları Kokpitte Gör</span>
+                            <span>{t('ip.cat.link')}</span>
                             <span>→</span>
                         </button>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
-                        {ERAS.slice(0, 12).map((era) => (
+                        {ERAS.slice(0, 12).map((era) => {
+                            const et = eraText(era, lang);
+                            return (
                             <div
                                 key={era.id}
                                 onClick={() => { playTick(); onStart(); }}
@@ -358,20 +361,21 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                                     <div className="flex items-center justify-between">
                                         <span className="text-2xl">{era.icon}</span>
                                         <span className="text-[10px] bg-black/60 border border-white/10 px-1.5 py-0.5 rounded font-mono text-amber-300">
-                                            {era.yearDisplay}
+                                            {et.year}
                                         </span>
                                     </div>
                                     <div>
                                         <div className="text-xs font-bold text-white line-clamp-1 group-hover:text-amber-300 transition">
-                                            {era.titleTr}
+                                            {et.title}
                                         </div>
                                         <div className="text-[10px] text-slate-400 line-clamp-1">
-                                            {era.badge}
+                                            {et.badge}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
 
@@ -380,71 +384,71 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                     <div className="rounded-3xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 p-8 md:p-12 text-center space-y-8 shadow-2xl">
                         <div className="space-y-3">
                             <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 rounded-full text-amber-400 text-xs font-black uppercase">
-                                ⚡ ŞEFFAF VE DÜŞÜK MALİYETLİ
+                                {t('ip.price.badge')}
                             </div>
                             <h2 className="text-3xl sm:text-4xl font-black text-white">
-                                5 Ücretsiz Kredi ile Başlayın, Diledikçe Yükleyin
+                                {t('ip.price.title')}
                             </h2>
                             <p className="text-slate-400 text-xs md:text-sm max-w-xl mx-auto">
-                                Abonelik tuzağı yok. Kullandığın kadar öde mantığıyla dilediğin zaman paket al, süresiz kullan.
+                                {t('ip.price.sub')}
                             </p>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto text-left">
                             {/* Starter */}
                             <div className="rounded-2xl bg-slate-950 border border-slate-800 p-6 space-y-4 hover:border-slate-700 transition">
-                                <div className="text-xs font-bold text-slate-400">Zaman Kapsülü</div>
+                                <div className="text-xs font-bold text-slate-400">{t('ip.p1.name')}</div>
                                 <div className="text-3xl font-black text-white">₺49</div>
-                                <div className="text-amber-400 font-mono text-sm font-bold">25 Plütonyum Kredisi</div>
+                                <div className="text-amber-400 font-mono text-sm font-bold">{t('ip.p1.cr')}</div>
                                 <ul className="text-xs text-slate-300 space-y-2 pt-2 border-t border-slate-800">
-                                    <li>✓ 25 Fotoğraf Sıçraması</li>
-                                    <li>✓ Tarihi Gazete & Pasaport</li>
-                                    <li>✓ HD İndirme</li>
+                                    <li>{t('ip.p1.l1')}</li>
+                                    <li>{t('ip.p1.l2')}</li>
+                                    <li>{t('ip.p1.l3')}</li>
                                 </ul>
                                 <button
                                     onClick={() => onOpenPricing && onOpenPricing()}
                                     className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition cursor-pointer"
                                 >
-                                    Paketi Seç
+                                    {t('ip.pick')}
                                 </button>
                             </div>
 
                             {/* Popular */}
                             <div className="relative rounded-2xl bg-gradient-to-b from-amber-950/40 to-slate-950 border-2 border-amber-400 p-6 space-y-4 shadow-xl shadow-amber-500/10">
                                 <div className="absolute -top-3 right-4 bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                                    En Popüler
+                                    {t('ip.popular')}
                                 </div>
-                                <div className="text-xs font-bold text-amber-300">Zaman Gezgini</div>
+                                <div className="text-xs font-bold text-amber-300">{t('ip.p2.name')}</div>
                                 <div className="text-3xl font-black text-white">₺99</div>
-                                <div className="text-amber-400 font-mono text-sm font-bold">75 Plütonyum Kredisi</div>
+                                <div className="text-amber-400 font-mono text-sm font-bold">{t('ip.p2.cr')}</div>
                                 <ul className="text-xs text-slate-300 space-y-2 pt-2 border-t border-slate-800">
-                                    <li>✓ 75 Fotoğraf Sıçraması</li>
-                                    <li>✓ 9:16 Video Timelapse Klip</li>
-                                    <li>✓ Öncelikli Hızlı Üretim</li>
+                                    <li>{t('ip.p2.l1')}</li>
+                                    <li>{t('ip.p2.l2')}</li>
+                                    <li>{t('ip.p2.l3')}</li>
                                 </ul>
                                 <button
                                     onClick={() => onOpenPricing && onOpenPricing()}
                                     className="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer shadow-md"
                                 >
-                                    Hemen Yükle
+                                    {t('ip.p2.btn')}
                                 </button>
                             </div>
 
                             {/* Pro */}
                             <div className="rounded-2xl bg-slate-950 border border-slate-800 p-6 space-y-4 hover:border-slate-700 transition">
-                                <div className="text-xs font-bold text-slate-400">Zaman Lordu</div>
+                                <div className="text-xs font-bold text-slate-400">{t('ip.p3.name')}</div>
                                 <div className="text-3xl font-black text-white">₺199</div>
-                                <div className="text-amber-400 font-mono text-sm font-bold">250 Plütonyum Kredisi</div>
+                                <div className="text-amber-400 font-mono text-sm font-bold">{t('ip.p3.cr')}</div>
                                 <ul className="text-xs text-slate-300 space-y-2 pt-2 border-t border-slate-800">
-                                    <li>✓ 250 Fotoğraf Sıçraması</li>
-                                    <li>✓ Sınırsız Video Klip & Albüm</li>
-                                    <li>✓ En Yüksek Çözünürlük</li>
+                                    <li>{t('ip.p3.l1')}</li>
+                                    <li>{t('ip.p3.l2')}</li>
+                                    <li>{t('ip.p3.l3')}</li>
                                 </ul>
                                 <button
                                     onClick={() => onOpenPricing && onOpenPricing()}
                                     className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition cursor-pointer"
                                 >
-                                    Paketi Seç
+                                    {t('ip.pick')}
                                 </button>
                             </div>
                         </div>
@@ -454,8 +458,8 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                 {/* 5. FAQ SECTION */}
                 <section className="max-w-3xl mx-auto px-4 sm:px-6">
                     <div className="text-center space-y-3 mb-10">
-                        <h2 className="text-2xl sm:text-3xl font-black text-white">Sıkça Sorulan Sorular</h2>
-                        <p className="text-slate-400 text-xs sm:text-sm">Aklınıza takılan tüm soruların yanıtları</p>
+                        <h2 className="text-2xl sm:text-3xl font-black text-white">{t('ip.faq.title')}</h2>
+                        <p className="text-slate-400 text-xs sm:text-sm">{t('ip.faq.sub')}</p>
                     </div>
 
                     <div className="space-y-3">
@@ -485,16 +489,16 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                 <section className="max-w-5xl mx-auto px-4 sm:px-6">
                     <div className="rounded-3xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 p-8 md:p-12 text-center text-slate-950 space-y-6 shadow-2xl">
                         <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-                            Zaman Sizi Bekliyor. Tarihinize Bugün Tanıklık Edin.
+                            {t('ip.bottom.title')}
                         </h2>
                         <p className="text-slate-900 font-medium text-sm md:text-base max-w-xl mx-auto">
-                            Hemen bir fotoğrafınızı yükleyin, 5 ücretsiz sıçrama hakkınızla geçmişe ve geleceğe ilk adımınızı atın.
+                            {t('ip.bottom.sub')}
                         </p>
                         <button
                             onClick={() => { playWarp(); onStart(); }}
                             className="px-10 py-4 rounded-2xl bg-slate-950 text-white font-black text-base shadow-2xl hover:scale-105 active:scale-95 transition cursor-pointer"
                         >
-                            🚀 KOKPİTE GİT VE BAŞLA
+                            {t('ip.bottom.btn')}
                         </button>
                     </div>
                 </section>

@@ -6,6 +6,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { playCameraShutter, playSuccess, playTick, playWarp } from '../lib/sfxUtils';
 import { generateFalAiVideo } from '../services/falAiService';
 import { getCustomApiKeys, saveCustomApiKeys } from '../services/geminiService';
+import { useT } from '../lib/useT';
+import { t as tt } from '../lib/i18n';
 
 interface VideoStudioPageProps {
     images: { eraId: string; url: string }[];
@@ -110,6 +112,7 @@ export default function VideoStudioPage({
     originalImage,
     onNavigateToCockpit
 }: VideoStudioPageProps) {
+    const { t, lang } = useT();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -130,7 +133,8 @@ export default function VideoStudioPage({
     const [falErrorMsg, setFalErrorMsg] = useState<string | null>(null);
     const [selectedFalModel, setSelectedFalModel] = useState<string>('fal-ai/veo-2');
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
-    const [customPromptNote, setCustomPromptNote] = useState('Kıyafetler rüzgarda canlı dalgalansın, altın enerji dalgasıyla çağlar arası kesintisiz ve akıcı dönüşsün.');
+    const [customPromptNote, setCustomPromptNote] = useState(() => t('vs.defaultNote'));
+    const [noteEdited, setNoteEdited] = useState(false);
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     const [falKeyInput, setFalKeyInput] = useState('');
     const [statusToast, setStatusToast] = useState<string | null>(null);
@@ -145,6 +149,11 @@ export default function VideoStudioPage({
         const { falKey } = getCustomApiKeys();
         if (falKey) setFalKeyInput(falKey);
     }, [originalImage]);
+
+    // Varsayılan talimat metni dile göre değişir (kullanıcı düzenlemediyse)
+    useEffect(() => {
+        if (!noteEdited) setCustomPromptNote(t('vs.defaultNote'));
+    }, [lang, noteEdited]);
 
     // Load single source image
     useEffect(() => {
@@ -304,7 +313,7 @@ export default function VideoStudioPage({
         ctx.fillStyle = activeTheme.color;
         ctx.font = 'bold 26px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${activeTheme.year} — ${activeTheme.title.split('—')[0]}`, w / 2, pillY + 42);
+        ctx.fillText(`${tt(`vs.th.${activeTheme.id}.year`)} — ${tt(`vs.th.${activeTheme.id}.title`).split('—')[0]}`, w / 2, pillY + 42);
         ctx.restore();
     };
 
@@ -575,7 +584,7 @@ export default function VideoStudioPage({
         } catch (err) {
             console.error('Video kayıt hatası:', err);
             setIsRecording(false);
-            alert('Tarayıcınızda video kaydı başlatılamadı.');
+            alert(t('vm.alertFail'));
         }
     };
 
@@ -590,7 +599,7 @@ export default function VideoStudioPage({
         playWarp();
         setFalLoading(true);
         setFalErrorMsg(null);
-        setFalStatusMsg('[1/3] Fal.ai sunucusuna bağlanılıyor...');
+        setFalStatusMsg(t('vs.status1'));
 
         try {
             const response = await generateFalAiVideo({
@@ -605,15 +614,15 @@ export default function VideoStudioPage({
             if (response.status === 'COMPLETED' && response.videoUrl) {
                 setGeneratedVideoUrl(response.videoUrl);
                 playSuccess();
-                setStatusToast('Fal.ai Videosu Başarıyla Oluşturuldu!');
+                setStatusToast(t('vs.toastOk'));
             } else if (response.status === 'FAILED') {
-                throw new Error(response.message || 'Fal.ai işlemi başarısız oldu.');
+                throw new Error(response.message || t('vs.failed'));
             } else {
-                setStatusToast('Video arka planda işleniyor...');
+                setStatusToast(t('vs.toastBg'));
             }
         } catch (err: any) {
             console.error('Fal.ai generation error:', err);
-            setFalErrorMsg(err.message || 'Fal.ai video üretimi sırasında bir hata oluştu.');
+            setFalErrorMsg(err.message || t('vs.errGeneric'));
         } finally {
             setFalLoading(false);
             setTimeout(() => setStatusToast(null), 4000);
@@ -647,14 +656,14 @@ export default function VideoStudioPage({
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                FAL.AI OMNI LATEST — CANLI VİDEO & KIYAFET DÖNÜŞÜMÜ
+                                {t('vs.title')}
                             </h2>
                             <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-cyan-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
                                 FAL.AI OMNI
                             </span>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Fal.ai Omni Latest / Veo 2 motoru ile tek fotoğraftaki insan canlanır, rüzgarda kıyafetleri dalgalanır ve animasyonla çağlar arası kıyafet değiştirir.
+                            {t('vs.desc')}
                         </p>
                     </div>
                 </div>
@@ -673,7 +682,7 @@ export default function VideoStudioPage({
                         className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs border border-slate-700 transition flex items-center gap-2 cursor-pointer"
                     >
                         <span>📸</span>
-                        <span>Farklı Fotoğraf Seç</span>
+                        <span>{t('vs.pick')}</span>
                     </button>
                 </div>
             </div>
@@ -689,7 +698,7 @@ export default function VideoStudioPage({
                         onClick={() => setShowApiKeyModal(true)}
                         className="px-3 py-1 rounded-xl bg-red-500/30 hover:bg-red-500/50 text-white font-bold text-[11px] whitespace-nowrap cursor-pointer"
                     >
-                        🔑 Anahtarı Kontrol Et
+                        {t('vs.checkKey')}
                     </button>
                 </div>
             )}
@@ -723,7 +732,7 @@ export default function VideoStudioPage({
                         {/* Minimal top status */}
                         <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-white text-[10px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg pointer-events-none">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>{falLoading ? 'FAL.AI İŞLENİYOR' : isRecording ? `KAYDEDİLİYOR %${recordProgress}` : 'FAL.AI OMNI 60 FPS'}</span>
+                            <span>{falLoading ? t('vs.processing') : isRecording ? t('vs.recordingLabel', { n: recordProgress }) : 'FAL.AI OMNI 60 FPS'}</span>
                         </div>
 
                         {/* Bottom Floating Controls (When canvas is active) */}
@@ -752,7 +761,7 @@ export default function VideoStudioPage({
                                     }}
                                     className="px-2.5 py-1 rounded-lg bg-slate-800 text-[10px] font-mono font-bold text-amber-300 hover:bg-slate-700 transition cursor-pointer"
                                 >
-                                    {speed === 1800 ? '⚡ HIZLI' : speed === 4500 ? '🐌 SİNEMA' : '⏱ NORMAL'}
+                                    {speed === 1800 ? t('vs.speedFast') : speed === 4500 ? t('vs.speedCinema') : t('vs.speedNormal')}
                                 </button>
                             </div>
                         )}
@@ -774,7 +783,7 @@ export default function VideoStudioPage({
                             className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-500 hover:brightness-110 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
                             <span>{falLoading ? '⏳' : '🚀'}</span>
-                            <span>{falLoading ? 'Fal.ai Omni Hesaplanıyor...' : 'Fal.ai Omni Latest ile Video Üret'}</span>
+                            <span>{falLoading ? t('vs.computing') : t('vs.generate')}</span>
                         </button>
 
                         {generatedVideoUrl ? (
@@ -786,7 +795,7 @@ export default function VideoStudioPage({
                                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 text-white font-black text-xs shadow-xl active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer text-center"
                             >
                                 <span>📥</span>
-                                <span>Oluşturulan AI Videoyu İndir (MP4)</span>
+                                <span>{t('vs.dlAi')}</span>
                             </a>
                         ) : (
                             <button
@@ -795,7 +804,7 @@ export default function VideoStudioPage({
                                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs shadow-xl active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                             >
                                 <span>{isRecording ? '⏳' : '📥'}</span>
-                                <span>{isRecording ? `Video İşleniyor (%${recordProgress})...` : 'Canlı Kıyafet Videosunu İndir (60 FPS)'}</span>
+                                <span>{isRecording ? t('vs.processingVideo', { n: recordProgress }) : t('vs.dlLive')}</span>
                             </button>
                         )}
                     </div>
@@ -808,21 +817,21 @@ export default function VideoStudioPage({
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-base font-black text-white flex items-center gap-2">
-                                <span>🤖</span> Fal.ai Model & Motor Ayarları
+                                <span>🤖</span>{t('vs.settings')}
                             </h3>
                             <button
                                 onClick={() => setShowApiKeyModal(true)}
                                 className="text-xs font-bold text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
                             >
                                 <span>🔑</span>
-                                <span>Fal.ai Key Ayarla</span>
+                                <span>{t('vs.setKey')}</span>
                             </button>
                         </div>
 
                         {/* Model Selector */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                             {[
-                                { id: 'fal-ai/veo-2', name: 'Fal.ai Omni / Veo 2', badge: 'Önerilen' },
+                                { id: 'fal-ai/veo-2', name: 'Fal.ai Omni / Veo 2', badge: t('vs.recommended') },
                                 { id: 'fal-ai/kling-video/v1.5/pro/image-to-video', name: 'Kling 1.5 Pro', badge: 'HD Motion' },
                                 { id: 'fal-ai/minimax/video-01/image-to-video', name: 'Minimax Video-01', badge: 'Fast' }
                             ].map((m) => (
@@ -843,12 +852,12 @@ export default function VideoStudioPage({
 
                         <div>
                             <label className="block text-xs font-bold text-slate-300 mb-1">
-                                Fal.ai Hareket & Kıyafet Dönüşüm Talimatı (Prompt):
+                                {t('vs.promptLabel')}
                             </label>
                             <textarea
                                 rows={3}
                                 value={customPromptNote}
-                                onChange={(e) => setCustomPromptNote(e.target.value)}
+                                onChange={(e) => { setNoteEdited(true); setCustomPromptNote(e.target.value); }}
                                 className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-300 focus:outline-none focus:border-amber-400 font-sans"
                             />
                         </div>
@@ -856,13 +865,13 @@ export default function VideoStudioPage({
                         {/* Prompt Presets */}
                         <div className="flex flex-wrap gap-2 pt-1">
                             {[
-                                '⚡ Hızlı ve Akıcı Kıyafet Dönüşümü',
-                                '🌊 Güçlü Rüzgar ve Kumaş Dalgalanması',
-                                '✨ Altın Enerji Parçacıkları ve Işık Dalgası'
+                                t('vs.preset1'),
+                                t('vs.preset2'),
+                                t('vs.preset3')
                             ].map((preset) => (
                                 <button
                                     key={preset}
-                                    onClick={() => { playTick(); setCustomPromptNote(preset); }}
+                                    onClick={() => { playTick(); setNoteEdited(true); setCustomPromptNote(preset); }}
                                     className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400 hover:text-amber-300 hover:border-amber-400/50 transition cursor-pointer"
                                 >
                                     {preset}
@@ -875,10 +884,10 @@ export default function VideoStudioPage({
                     <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-base font-black text-white flex items-center gap-2">
-                                <span>🎞️</span> Kıyafet Dönüşüm Aşamaları ({ERA_THEMES.length} Çağ)
+                                <span>🎞️</span>{t('vs.stagesT', { n: ERA_THEMES.length })}
                             </h3>
                             <span className="text-xs text-amber-400 font-mono font-bold">
-                                Kesintisiz Akış
+                                {t('vs.seamless')}
                             </span>
                         </div>
 
@@ -903,16 +912,16 @@ export default function VideoStudioPage({
 
                                         <div className="flex-1 min-w-0">
                                             <div className="text-xs font-bold text-white truncate">
-                                                {theme.title}
+                                                {t(`vs.th.${theme.id}.title`)}
                                             </div>
                                             <div className="text-[10px] font-mono text-slate-400">
-                                                {theme.year}
+                                                {t(`vs.th.${theme.id}.year`)}
                                             </div>
                                         </div>
 
                                         {isActive && (
                                             <span className="text-[9px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase animate-pulse">
-                                                CANLI
+                                                {t('vs.liveBadge')}
                                             </span>
                                         )}
                                     </div>
@@ -929,7 +938,7 @@ export default function VideoStudioPage({
                     <div className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-4 text-white shadow-2xl">
                         <div className="flex items-center justify-between">
                             <h3 className="font-black text-base flex items-center gap-2">
-                                <span>🔑</span> Fal.ai API Anahtarınızı (FAL_KEY) Girin
+                                <span>🔑</span>{t('vs.keyTitle')}
                             </h3>
                             <button
                                 onClick={() => setShowApiKeyModal(false)}
@@ -939,7 +948,7 @@ export default function VideoStudioPage({
                             </button>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Fal.ai Omni / Veo 2 video motorunu çalıştırmak için lütfen Fal.ai anahtarınızı girin:
+                            {t('vs.keyDesc')}
                         </p>
                         <input
                             type="password"
@@ -953,7 +962,7 @@ export default function VideoStudioPage({
                                 onClick={handleSaveFalKey}
                                 className="flex-1 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer"
                             >
-                                Kaydet & Video Üret
+                                {t('vs.keySave')}
                             </button>
                         </div>
                     </div>
