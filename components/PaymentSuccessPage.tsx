@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
+import { useLang } from '../lib/use-lang';
+import { t } from '../lib/i18n';
 
 const PaymentSuccessPage: React.FC = () => {
   const { refreshCredits, user } = useAuth();
+  const { lang } = useLang();
   const [isRefreshing, setIsRefreshing] = useState(true);
 
   useEffect(() => {
@@ -35,24 +38,24 @@ const PaymentSuccessPage: React.FC = () => {
             </div>
 
             <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-4">
-              Ödeme Başarılı!
+              {t('pay.success.title', lang)}
             </h1>
 
             <p className="text-lg text-text-muted-light dark:text-text-muted-dark mb-6">
-              Kredileriniz başarıyla hesabınıza yüklendi.
+              {t('pay.success.subtitle', lang)}
             </p>
 
             {isRefreshing ? (
               <div className="flex items-center justify-center py-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 <span className="ml-3 text-text-muted-light dark:text-text-muted-dark">
-                  Bakiye güncelleniyor...
+                  {t('pay.success.refreshing', lang)}
                 </span>
               </div>
             ) : user && (
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 mb-6">
                 <p className="text-text-light dark:text-text-dark">
-                  Güncel Bakiyeniz: <span className="font-bold text-green-600 dark:text-green-400">{user.credits} kredi</span>
+                  {t('pay.success.balance', lang)} <span className="font-bold text-green-600 dark:text-green-400">{user.credits} {t('common.creditUnit', lang)}</span>
                 </p>
               </div>
             )}
@@ -62,13 +65,13 @@ const PaymentSuccessPage: React.FC = () => {
                 onClick={() => window.location.href = '/'}
                 className="py-3 px-8 bg-primary text-background-dark rounded-xl font-bold hover:bg-yellow-500 transition-colors"
               >
-                Görsel Üretmeye Başla
+                {t('pay.success.start', lang)}
               </button>
               <button
                 onClick={() => window.location.href = '/pricing'}
                 className="py-3 px-8 bg-stone-200 dark:bg-surface-dark text-text-light dark:text-text-dark rounded-xl font-bold hover:bg-stone-300 dark:hover:bg-surface-dark-light transition-colors"
               >
-                Daha Fazla Kredi Satın Al
+                {t('pay.success.more', lang)}
               </button>
             </div>
           </div>
@@ -79,13 +82,13 @@ const PaymentSuccessPage: React.FC = () => {
               <svg className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
-              Bilgi
+              {t('pay.info', lang)}
             </h3>
             <ul className="text-sm text-text-muted-light dark:text-text-muted-dark space-y-1">
-              <li>• Kredileriniz anında hesabınıza yüklenmiştir</li>
-              <li>• Kredileriniz hiçbir surette zaman aşımına uğramaz</li>
-              <li>• Her görsel üretimi 1 kredi harcar</li>
-              <li>• Ödeme detaylarınızı profilinizden görüntüleyebilirsiniz</li>
+              <li>{t('pay.success.info.1', lang)}</li>
+              <li>{t('pay.success.info.2', lang)}</li>
+              <li>{t('pay.success.info.3', lang)}</li>
+              <li>{t('pay.success.info.4', lang)}</li>
             </ul>
           </div>
         </div>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
+import { useLang } from '../lib/use-lang';
+import { t, tn, serverError, localeFor } from '../lib/i18n';
 import { 
   LayoutDashboard, Users, Activity, CreditCard, Settings, Search, Trash2, Plus 
 } from 'lucide-react';
@@ -45,6 +47,7 @@ type Tab = 'dashboard' | 'users' | 'activities' | 'payments' | 'settings';
 
 const AdminPanel: React.FC = () => {
   const { token } = useAuth();
+  const { lang } = useLang();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -89,7 +92,7 @@ const AdminPanel: React.FC = () => {
     });
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'API hatası');
+      throw new Error(serverError(error.error, 'admin.apiError'));
     }
     return response.json();
   };
@@ -137,20 +140,20 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
+    if (!window.confirm(tn('admin.confirmDelete'))) return;
     
     try {
       await apiCall(`/admin/users/${userId}`, { method: 'DELETE' });
-      alert('Kullanıcı başarıyla silindi');
+      alert(tn('admin.userDeleted'));
       fetchUsers();
     } catch (error: any) {
-      alert(error.message || 'Silme hatası');
+      alert(error.message || tn('admin.deleteError'));
     }
   };
 
   const handleAddCredits = async (userId: number) => {
-    const amount = prompt('Kredi miktarı:');
-    const reason = prompt('Sebep:');
+    const amount = prompt(tn('admin.promptAmount'));
+    const reason = prompt(tn('admin.promptReason'));
     if (!amount || !reason) return;
     
     try {
@@ -167,13 +170,13 @@ const AdminPanel: React.FC = () => {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Ekleme hatası');
+        throw new Error(serverError(data.error, 'admin.addError'));
       }
       
-      alert('Kredi başarıyla eklendi');
+      alert(tn('admin.creditsAdded'));
       fetchUsers();
     } catch (error: any) {
-      alert(error.message || 'Ekleme hatası');
+      alert(error.message || tn('admin.addError'));
     }
   };
 
@@ -183,9 +186,9 @@ const AdminPanel: React.FC = () => {
         method: 'PUT',
         body: JSON.stringify({ settings }),
       });
-      alert('Ayarlar güncellendi');
+      alert(tn('admin.settingsUpdated'));
     } catch (error: any) {
-      alert(error.message || 'Güncelleme hatası');
+      alert(error.message || tn('admin.updateError'));
     }
   };
 
@@ -199,10 +202,10 @@ const AdminPanel: React.FC = () => {
           is_active: pkg.is_active 
         }),
       });
-      alert('Paket fiyatı güncellendi');
+      alert(tn('admin.packageUpdated'));
       fetchPackages();
     } catch (error: any) {
-      alert(error.message || 'Güncelleme hatası');
+      alert(error.message || tn('admin.updateError'));
     }
   };
 
@@ -233,14 +236,14 @@ const AdminPanel: React.FC = () => {
       <div className="max-w-7xl mx-auto p-6">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-text-light dark:text-white mb-4">
-              Admin Paneli
+              {t('admin.title', lang)}
             </h1>
             <div className="flex gap-2 flex-wrap">
-              <TabButton tab="dashboard" label="Dashboard" icon={<LayoutDashboard size={18} />} />
-              <TabButton tab="users" label="Kullanıcılar" icon={<Users size={18} />} />
-              <TabButton tab="activities" label="Aktiviteler" icon={<Activity size={18} />} />
-              <TabButton tab="payments" label="Ödemeler" icon={<CreditCard size={18} />} />
-              <TabButton tab="settings" label="Ayarlar" icon={<Settings size={18} />} />
+              <TabButton tab="dashboard" label={t('admin.tab.dashboard', lang)} icon={<LayoutDashboard size={18} />} />
+              <TabButton tab="users" label={t('admin.tab.users', lang)} icon={<Users size={18} />} />
+              <TabButton tab="activities" label={t('admin.tab.activities', lang)} icon={<Activity size={18} />} />
+              <TabButton tab="payments" label={t('admin.tab.payments', lang)} icon={<CreditCard size={18} />} />
+              <TabButton tab="settings" label={t('admin.tab.settings', lang)} icon={<Settings size={18} />} />
             </div>
           </div>
 
@@ -248,33 +251,33 @@ const AdminPanel: React.FC = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className="bg-white dark:bg-surface-dark p-6 rounded-xl shadow-lg">
-                <div className="text-sm text-text-muted-light dark:text-gray-400">Toplam Kullanıcı</div>
+                <div className="text-sm text-text-muted-light dark:text-gray-400">{t('admin.stat.users', lang)}</div>
                 <div className="text-3xl font-bold text-primary mt-2">{stats.totalUsers}</div>
               </div>
               <div className="bg-white dark:bg-surface-dark p-6 rounded-xl shadow-lg">
-                <div className="text-sm text-text-muted-light dark:text-gray-400">Toplam Kredi Üretimi</div>
+                <div className="text-sm text-text-muted-light dark:text-gray-400">{t('admin.stat.credits', lang)}</div>
                 <div className="text-3xl font-bold text-green-600 mt-2">{stats.totalCreditsGenerated}</div>
               </div>
               <div className="bg-white dark:bg-surface-dark p-6 rounded-xl shadow-lg">
-                <div className="text-sm text-text-muted-light dark:text-gray-400">Toplam Gelir (TRY)</div>
+                <div className="text-sm text-text-muted-light dark:text-gray-400">{t('admin.stat.revenue', lang)}</div>
                 <div className="text-3xl font-bold text-blue-600 mt-2">₺{stats.totalRevenue?.toFixed(2)}</div>
               </div>
               <div className="bg-white dark:bg-surface-dark p-6 rounded-xl shadow-lg">
-                <div className="text-sm text-text-muted-light dark:text-gray-400">Aktif Ödemeler</div>
+                <div className="text-sm text-text-muted-light dark:text-gray-400">{t('admin.stat.payments', lang)}</div>
                 <div className="text-3xl font-bold text-orange-600 mt-2">{stats.activePayments}</div>
               </div>
             </div>
 
             <div className="bg-white dark:bg-surface-dark rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-text-light dark:text-white mb-4">Son Aktiviteler</h2>
+              <h2 className="text-xl font-bold text-text-light dark:text-white mb-4">{t('admin.recent', lang)}</h2>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-stone-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 text-text-light dark:text-white">Kullanıcı</th>
-                      <th className="text-left py-3 px-4 text-text-light dark:text-white">İşlem</th>
-                      <th className="text-left py-3 px-4 text-text-light dark:text-white">Açıklama</th>
-                      <th className="text-left py-3 px-4 text-text-light dark:text-white">Tarih</th>
+                      <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.user', lang)}</th>
+                      <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.action', lang)}</th>
+                      <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.description', lang)}</th>
+                      <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.date', lang)}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -291,7 +294,7 @@ const AdminPanel: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{activity.description}</td>
-                        <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{new Date(activity.created_at).toLocaleString('tr-TR')}</td>
+                        <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{new Date(activity.created_at).toLocaleString(localeFor(lang))}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -305,13 +308,13 @@ const AdminPanel: React.FC = () => {
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-lg overflow-hidden">
             <div className="p-6 border-b border-stone-200 dark:border-gray-700">
               <div className="flex justify-between items-center gap-4">
-                <h2 className="text-xl font-bold text-text-light dark:text-white">Kullanıcılar ({usersTotal})</h2>
+                <h2 className="text-xl font-bold text-text-light dark:text-white">{t('admin.usersTitle', lang, { n: usersTotal })}</h2>
                 <div className="flex gap-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input
                       type="text"
-                      placeholder="Ara..."
+                      placeholder={t('admin.search', lang)}
                       value={usersSearch}
                       onChange={(e) => {
                         setUsersSearch(e.target.value);
@@ -324,7 +327,7 @@ const AdminPanel: React.FC = () => {
                     onClick={() => fetchUsers()}
                     className="text-primary hover:underline"
                   >
-                    Yenile
+                    {t('admin.refresh', lang)}
                   </button>
                 </div>
               </div>
@@ -334,11 +337,11 @@ const AdminPanel: React.FC = () => {
                 <thead>
                   <tr className="border-b border-stone-200 dark:border-gray-700">
                     <th className="text-left py-3 px-4 text-text-light dark:text-white">ID</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">E-posta</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.email', lang)}</th>
                     <th className="text-left py-3 px-4 text-text-light dark:text-white">Admin</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">Kredi</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">Kayıt Tarihi</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">İşlemler</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.credit', lang)}</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.registered', lang)}</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.actions', lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -354,7 +357,7 @@ const AdminPanel: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3 px-4 font-bold text-primary">{user.credits}</td>
-                      <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{new Date(user.created_at).toLocaleDateString('tr-TR')}</td>
+                      <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{new Date(user.created_at).toLocaleDateString(localeFor(lang))}</td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2">
                           <button
@@ -362,7 +365,7 @@ const AdminPanel: React.FC = () => {
                             className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
                           >
                             <Plus size={14} />
-                            Kredi
+                            {t('admin.addCredits', lang)}
                           </button>
                           {!user.is_admin && (
                             <button
@@ -370,7 +373,7 @@ const AdminPanel: React.FC = () => {
                               className="flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                             >
                               <Trash2 size={14} />
-                              Sil
+                              {t('admin.delete', lang)}
                             </button>
                           )}
                         </div>
@@ -387,14 +390,14 @@ const AdminPanel: React.FC = () => {
                   disabled={usersPage === 1}
                   className="px-4 py-2 bg-stone-100 dark:bg-surface-dark rounded disabled:opacity-50"
                 >
-                  Önceki
+                  {t('admin.prev', lang)}
                 </button>
-                <span className="px-4 py-2 text-text-light dark:text-gray-300">Sayfa {usersPage}</span>
+                <span className="px-4 py-2 text-text-light dark:text-gray-300">{t('admin.page', lang, { n: usersPage })}</span>
                 <button
                   onClick={() => setUsersPage(p => p + 1)}
                   className="px-4 py-2 bg-stone-100 dark:bg-surface-dark rounded"
                 >
-                  Sonraki
+                  {t('admin.next', lang)}
                 </button>
               </div>
             )}
@@ -404,18 +407,18 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'activities' && (
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-lg overflow-hidden">
             <div className="p-6 border-b border-stone-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-text-light dark:text-white">Aktiviteler</h2>
+              <h2 className="text-xl font-bold text-text-light dark:text-white">{t('admin.activitiesTitle', lang)}</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-stone-200 dark:border-gray-700">
                     <th className="text-left py-3 px-4 text-text-light dark:text-white">ID</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">Kullanıcı</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">İşlem</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">Kredi</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">Açıklama</th>
-                    <th className="text-left py-3 px-4 text-text-light dark:text-white">Tarih</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.user', lang)}</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.action', lang)}</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.credit', lang)}</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.description', lang)}</th>
+                    <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.date', lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -426,7 +429,7 @@ const AdminPanel: React.FC = () => {
                       <td className="py-3 px-4 text-text-light dark:text-gray-300">{activity.action_type}</td>
                       <td className="py-3 px-4 text-text-light dark:text-gray-300">{activity.credits_used}</td>
                       <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{activity.description}</td>
-                      <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{new Date(activity.created_at).toLocaleString('tr-TR')}</td>
+                      <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{new Date(activity.created_at).toLocaleString(localeFor(lang))}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -443,10 +446,10 @@ const AdminPanel: React.FC = () => {
                 onChange={(e) => setPaymentsStatus(e.target.value)}
                 className="px-4 py-2 border border-stone-300 dark:border-gray-700 rounded-lg bg-white dark:bg-surface-dark text-text-light dark:text-gray-300"
               >
-                <option value="">Tümü</option>
-                <option value="pending">Bekleyen</option>
-                <option value="completed">Tamamlandı</option>
-                <option value="failed">Başarısız</option>
+                <option value="">{t('admin.filter.all', lang)}</option>
+                <option value="pending">{t('admin.filter.pending', lang)}</option>
+                <option value="completed">{t('admin.filter.completed', lang)}</option>
+                <option value="failed">{t('admin.filter.failed', lang)}</option>
               </select>
             </div>
 
@@ -456,12 +459,12 @@ const AdminPanel: React.FC = () => {
                   <thead>
                     <tr className="border-b border-stone-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 text-text-light dark:text-white">ID</th>
-                      <th className="text-left py-3 px-4 text-text-light dark:text-white">Kullanıcı</th>
-                      <th className="text-left py-3 px-4 text-text-light dark:text-white">Kredi</th>
+                      <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.user', lang)}</th>
+                      <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.credit', lang)}</th>
                       <th className="text-left py-3 px-4 text-text-light dark:text-white">TRY</th>
                       <th className="text-left py-3 px-4 text-text-light dark:text-white">EUR</th>
-                      <th className="text-left py-3 px-4 text-text-light dark:text-white">Durum</th>
-                      <th className="text-left py-3 px-4 text-text-light dark:text-white">Tarih</th>
+                      <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.status', lang)}</th>
+                      <th className="text-left py-3 px-4 text-text-light dark:text-white">{t('admin.col.date', lang)}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -481,7 +484,7 @@ const AdminPanel: React.FC = () => {
                             {payment.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{new Date(payment.created_at).toLocaleString('tr-TR')}</td>
+                        <td className="py-3 px-4 text-sm text-text-light dark:text-gray-300">{new Date(payment.created_at).toLocaleString(localeFor(lang))}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -493,13 +496,13 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'settings' && (
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-text-light dark:text-white mb-6">Sistem Ayarları</h2>
+            <h2 className="text-xl font-bold text-text-light dark:text-white mb-6">{t('admin.settingsTitle', lang)}</h2>
             
             <div className="space-y-8">
               {/* Ücretsiz Kredi Ayarı */}
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-white mb-2">
-                  Ücretsiz Kredi (Kayıt Olunca)
+                  {t('admin.freeCredits', lang)}
                 </label>
                 <input
                   type="number"
@@ -511,19 +514,19 @@ const AdminPanel: React.FC = () => {
 
               {/* Paket Fiyatları */}
               <div>
-                <h3 className="text-lg font-bold text-text-light dark:text-white mb-4">Paket Fiyatları</h3>
+                <h3 className="text-lg font-bold text-text-light dark:text-white mb-4">{t('admin.packagePrices', lang)}</h3>
                 <div className="space-y-4">
                   {packages.map((pkg) => (
                     <div key={pkg.id} className="flex items-center gap-4 p-4 bg-stone-50 dark:bg-gray-800 rounded-lg">
                       <div className="flex-1">
-                        <div className="text-xl font-bold text-primary">{pkg.credits} Kredi</div>
+                        <div className="text-xl font-bold text-primary">{t('admin.pkgCredits', lang, { n: pkg.credits })}</div>
                         <div className="text-sm text-text-muted-light dark:text-gray-400">
-                          ID: {pkg.id} {pkg.is_active ? '• Aktif' : '• Pasif'}
+                          ID: {pkg.id} {pkg.is_active ? t('admin.active', lang) : t('admin.inactive', lang)}
                         </div>
                       </div>
                       <div className="flex-1">
                         <label className="block text-sm font-medium text-text-light dark:text-white mb-2">
-                          Fiyat (TRY)
+                          {t('admin.priceTry', lang)}
                         </label>
                         <input
                           type="number"
@@ -542,7 +545,7 @@ const AdminPanel: React.FC = () => {
                         onClick={() => handleUpdatePackagePrice(pkg.id, pkg)}
                         className="px-4 py-2 bg-primary text-background-dark rounded-lg font-medium hover:bg-yellow-500"
                       >
-                        Güncelle
+                        {t('admin.update', lang)}
                       </button>
                     </div>
                   ))}
@@ -553,7 +556,7 @@ const AdminPanel: React.FC = () => {
                 onClick={handleUpdateSettings}
                 className="px-6 py-2 bg-primary text-background-dark rounded-lg font-medium hover:bg-yellow-500"
               >
-                Ayarları Kaydet
+                {t('admin.saveSettings', lang)}
               </button>
             </div>
           </div>

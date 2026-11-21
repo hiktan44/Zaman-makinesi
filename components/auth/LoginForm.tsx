@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLang } from '../../lib/use-lang';
+import { t, tn } from '../../lib/i18n';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -8,6 +10,7 @@ interface LoginFormProps {
 
 const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onGoogleClick }) => {
   const { login, register } = useAuth();
+  const { lang } = useLang();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +30,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onGoogleClick }) => {
       }
       onSuccess?.();
     } catch (err: any) {
-      setError(err.message || 'İşlem başarısız');
+      setError(err.message || tn('login.failed'));
     } finally {
       setIsLoading(false);
     }
@@ -48,21 +51,21 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onGoogleClick }) => {
 
       <div>
         <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-          E-posta
+          {t('login.email', lang)}
         </label>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-full px-4 py-2 border border-stone-300 dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent"
-          placeholder="ornek@email.com"
+          placeholder={t('login.emailPlaceholder', lang)}
           required
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-          Şifre
+          {t('login.password', lang)}
         </label>
         <input
           type="password"
@@ -80,8 +83,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onGoogleClick }) => {
         className="w-full bg-primary text-background-dark font-bold py-3 px-4 rounded-lg hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading 
-          ? (isLogin ? 'Giriş yapılıyor...' : 'Kayıt yapılıyor...')
-          : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')
+          ? (isLogin ? t('login.submitting', lang) : t('login.registering', lang))
+          : (isLogin ? t('common.login', lang) : t('login.register', lang))
         }
       </button>
 
@@ -92,8 +95,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onGoogleClick }) => {
           className="text-sm text-primary hover:text-yellow-500 font-medium"
         >
           {isLogin 
-            ? 'Hesabın yok mu? Kayıt ol'
-            : 'Zaten hesabın var mı? Giriş yap'
+            ? t('login.noAccount', lang)
+            : t('login.haveAccount', lang)
           }
         </button>
       </div>
@@ -106,7 +109,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onGoogleClick }) => {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-2 bg-background-light dark:bg-background-dark text-text-muted-light dark:text-text-muted-dark">
-                veya
+                {t('login.or', lang)}
               </span>
             </div>
           </div>
@@ -122,7 +125,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onGoogleClick }) => {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-5.09 3.3-7.59z"/>
             </svg>
-            Google ile Giriş Yap
+            {t('login.google', lang)}
           </button>
         </>
       )}
