@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 <url><loc>https://zamanmakinesi.app/</loc></url>
-<url><loc>https://zamanmakinesi.app/gizlilik/</loc></url>
-<url><loc>https://zamanmakinesi.app/kullanim-kosullari/</loc></url>
-<url><loc>https://zamanmakinesi.app/cerez-politikasi/</loc></url>
-<url><loc>https://zamanmakinesi.app/iletisim/</loc></url>
+<url><loc>https://zamanmakinesi.app/gizlilik/</loc><xhtml:link rel="alternate" hreflang="tr" href="https://zamanmakinesi.app/gizlilik/"/><xhtml:link rel="alternate" hreflang="en" href="https://zamanmakinesi.app/en/privacy/"/></url>
+<url><loc>https://zamanmakinesi.app/en/privacy/</loc><xhtml:link rel="alternate" hreflang="tr" href="https://zamanmakinesi.app/gizlilik/"/><xhtml:link rel="alternate" hreflang="en" href="https://zamanmakinesi.app/en/privacy/"/></url>
+<url><loc>https://zamanmakinesi.app/kullanim-kosullari/</loc><xhtml:link rel="alternate" hreflang="tr" href="https://zamanmakinesi.app/kullanim-kosullari/"/><xhtml:link rel="alternate" hreflang="en" href="https://zamanmakinesi.app/en/terms/"/></url>
+<url><loc>https://zamanmakinesi.app/en/terms/</loc><xhtml:link rel="alternate" hreflang="tr" href="https://zamanmakinesi.app/kullanim-kosullari/"/><xhtml:link rel="alternate" hreflang="en" href="https://zamanmakinesi.app/en/terms/"/></url>
+<url><loc>https://zamanmakinesi.app/cerez-politikasi/</loc><xhtml:link rel="alternate" hreflang="tr" href="https://zamanmakinesi.app/cerez-politikasi/"/><xhtml:link rel="alternate" hreflang="en" href="https://zamanmakinesi.app/en/cookies/"/></url>
+<url><loc>https://zamanmakinesi.app/en/cookies/</loc><xhtml:link rel="alternate" hreflang="tr" href="https://zamanmakinesi.app/cerez-politikasi/"/><xhtml:link rel="alternate" hreflang="en" href="https://zamanmakinesi.app/en/cookies/"/></url>
+<url><loc>https://zamanmakinesi.app/iletisim/</loc><xhtml:link rel="alternate" hreflang="tr" href="https://zamanmakinesi.app/iletisim/"/><xhtml:link rel="alternate" hreflang="en" href="https://zamanmakinesi.app/en/contact/"/></url>
+<url><loc>https://zamanmakinesi.app/en/contact/</loc><xhtml:link rel="alternate" hreflang="tr" href="https://zamanmakinesi.app/iletisim/"/><xhtml:link rel="alternate" hreflang="en" href="https://zamanmakinesi.app/en/contact/"/></url>
 </urlset>
