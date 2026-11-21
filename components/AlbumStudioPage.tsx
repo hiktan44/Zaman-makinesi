@@ -6,6 +6,8 @@ import React, { useState } from 'react';
 import { ERAS } from '../constants/eraConstants';
 import { createAlbumPage } from '../lib/albumUtils';
 import { playCameraShutter, playSuccess, playTick } from '../lib/sfxUtils';
+import { useT } from '../lib/useT';
+import { eraText } from '../constants/eraDisplay';
 
 interface AlbumStudioPageProps {
     images: { eraId: string; url: string }[];
@@ -19,14 +21,15 @@ export default function AlbumStudioPage({
     onNavigateToCockpit
 }: AlbumStudioPageProps) {
     const [isDownloading, setIsDownloading] = useState(false);
+    const { t, lang } = useT();
 
     // Fallback demo album if user hasn't generated any yet
     const demoItems = [
-        { eraId: '1920s', title: '1920’ler — Great Gatsby & Caz', yearDisplay: '1920’ler', url: '/images/demo-gatsby.jpg', fact: 'Caz çağı, flapper elbiseleri ve art-deco dönemi.' },
-        { eraId: 'ottoman_sultan', title: '1550 Osmanlı Saray İhtişamı', yearDisplay: '1550', url: '/images/demo-ottoman.jpg', fact: 'Topkapı Sarayı, ipek kaftanlar ve altın işlemeli saray zarafeti.' },
-        { eraId: 'wild_west_1880', title: '1885 Vahşi Batı Şerifi', yearDisplay: '1885', url: '/images/demo-west.jpg', fact: 'Altına hücum, kovboy çizmeleri ve frontier kasabaları.' },
-        { eraId: 'ancient_egypt', title: 'M.Ö. 1350 Antik Mısır Kraliçesi', yearDisplay: 'M.Ö. 1350', url: '/images/demo-egypt.jpg', fact: 'Nil kıyısı, altın firavun taçları ve piramitler çağı.' },
-        { eraId: 'cyberpunk_2077', title: '2077 Cyberpunk Neo-İstanbul', yearDisplay: '2077', url: '/images/demo-cyberpunk.jpg', fact: 'Neon gökdelenler, holografik köprüler ve sibernetik çağ.' }
+        { eraId: '1920s', title: t('al.d1.title'), yearDisplay: t('al.d1.year'), url: '/images/demo-gatsby.jpg', fact: t('al.d1.fact') },
+        { eraId: 'ottoman_sultan', title: t('al.d2.title'), yearDisplay: '1550', url: '/images/demo-ottoman.jpg', fact: t('al.d2.fact') },
+        { eraId: 'wild_west_1880', title: t('al.d3.title'), yearDisplay: '1885', url: '/images/demo-west.jpg', fact: t('al.d3.fact') },
+        { eraId: 'ancient_egypt', title: t('al.d4.title'), yearDisplay: t('al.d4.year'), url: '/images/demo-egypt.jpg', fact: t('al.d4.fact') },
+        { eraId: 'cyberpunk_2077', title: t('al.d5.title'), yearDisplay: '2077', url: '/images/demo-cyberpunk.jpg', fact: t('al.d5.fact') }
     ];
 
     const hasUserImages = images.length > 0;
@@ -35,10 +38,10 @@ export default function AlbumStudioPage({
         const era = ERAS.find(e => e.id === img.eraId);
         return {
             eraId: img.eraId,
-            title: era ? `${era.yearDisplay} ${era.titleTr}` : img.eraId,
-            yearDisplay: era ? era.yearDisplay : img.eraId,
+            title: era ? `${eraText(era, lang).year} ${eraText(era, lang).title}` : img.eraId,
+            yearDisplay: era ? eraText(era, lang).year : img.eraId,
             url: img.url,
-            fact: era ? era.historicalFactTr : 'Zaman Makinesi arşivi.'
+            fact: era ? eraText(era, lang).fact : t('al.archive')
         };
     });
 
@@ -61,7 +64,7 @@ export default function AlbumStudioPage({
             playSuccess();
         } catch (error) {
             console.error('Albüm indirme hatası:', error);
-            alert('PDF albüm oluşturulamadı.');
+            alert(t('al.alertFail'));
         } finally {
             setIsDownloading(false);
         }
@@ -90,14 +93,14 @@ export default function AlbumStudioPage({
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                TARİH ALBÜMÜ & GEZGİN KOLEKSİYONU
+                                {t('al.title')}
                             </h2>
                             <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                                PDF & BASKI
+                                {t('al.badge')}
                             </span>
                         </div>
                         <p className="text-xs text-slate-400">
-                            Tüm çağlardaki fotoğraflarınızı antika bir deri ciltli aile albümü şeklinde inceleyin ve tek tıkla PDF olarak indirin.
+                            {t('al.sub')}
                         </p>
                     </div>
                 </div>
@@ -109,7 +112,7 @@ export default function AlbumStudioPage({
                         className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition flex items-center gap-2 cursor-pointer"
                     >
                         <span>📥</span>
-                        <span>Fotoğrafları İndir</span>
+                        <span>{t('al.photos')}</span>
                     </button>
                     <button
                         disabled={isDownloading}
@@ -117,7 +120,7 @@ export default function AlbumStudioPage({
                         className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 text-slate-950 font-black text-xs shadow-md active:scale-95 transition flex items-center gap-2 cursor-pointer"
                     >
                         <span>{isDownloading ? '⏳' : '📖'}</span>
-                        <span>{isDownloading ? 'Albüm Derleniyor...' : 'Koleksiyonu PDF Olarak İndir'}</span>
+                        <span>{isDownloading ? t('al.compiling') : t('al.pdf')}</span>
                     </button>
                 </div>
             </div>
@@ -127,14 +130,14 @@ export default function AlbumStudioPage({
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">💡</span>
                         <p className="text-xs text-amber-200">
-                            Şu anda <strong>Demo Gezgin Albümünü</strong> görüntülüyorsunuz. Kendi fotoğrafınızla tüm çağlara ait kişisel bir albüm oluşturmak için kokpite gidin!
+                            {t('al.demoA')}<strong>{t('al.demoB')}</strong>{t('al.demoC')}
                         </p>
                     </div>
                     <button
                         onClick={onNavigateToCockpit}
                         className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl font-black text-xs transition whitespace-nowrap cursor-pointer"
                     >
-                        Fotoğraf Yükle →
+                        {t('al.upload')}
                     </button>
                 </div>
             )}
@@ -154,7 +157,7 @@ export default function AlbumStudioPage({
 
                         {/* Top Scrapbook Header */}
                         <div className="flex items-center justify-between border-b border-[#c2b093] pb-2 text-[11px] font-mono text-[#6b5131]">
-                            <span>SAYFA NO: {idx + 1}</span>
+                            <span>{t('al.page')}{idx + 1}</span>
                             <span className="font-black text-[#3d2b17]">{item.yearDisplay}</span>
                         </div>
 
