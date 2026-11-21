@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { serverError } from '../lib/i18n';
 
 interface User {
   id: number;
@@ -118,7 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Bir hata oluştu');
+      throw new Error(serverError(data.error, 'common.error'));
     }
 
     return data;

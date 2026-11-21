@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
+import { tn } from "../lib/i18n";
 
 const API_KEY = import.meta.env.VITE_API_KEY?.trim();
 
@@ -15,6 +16,17 @@ if (!API_KEY) {
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-image-preview" });
+
+/**
+ * Model resim yerine metin döndürdüğünde fırlatılır. Yedek istem akışı bu sınıfa göre
+ * (mesaj metnine değil) karar verir; böylece mesaj çevrilse de akış bozulmaz.
+ */
+class NoImageError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'NoImageError';
+    }
+}
 
 // --- Helper Functions ---
 
@@ -55,20 +67,20 @@ function getFriendlyErrorMessage(error: unknown): string {
     const msg = error instanceof Error ? error.message : String(error);
 
     if (msg.includes('429') || msg.includes("RESOURCE_EXHAUSTED")) {
-        return "Günlük kullanım limitine ulaşıldı. Lütfen daha sonra tekrar deneyin.";
+        return tn('gemini.quota');
     }
     if (msg.includes('500') || msg.includes("INTERNAL")) {
-        return "Sunucu hatası oluştu. Lütfen tekrar deneyin.";
+        return tn('gemini.server');
     }
     if (msg.includes("SAFETY") || msg.includes("BLOCKED") || msg.includes("finishReason")) {
-        return "Güvenlik filtresi nedeniyle resim oluşturulamadı.";
+        return tn('gemini.safety');
     }
-    if (msg.includes("Yapay zeka model bir resim yerine metin ile yanıt verdi")) {
-        return "Model görüntü üretemedi.";
+    if (error instanceof NoImageError) {
+        return tn('gemini.noImage');
     }
 
     // If the message is short enough, return it, otherwise generic error
-    return msg.length < 150 ? msg : "Beklenmedik bir hata oluştu.";
+    return msg.length < 150 ? msg : tn('gemini.unexpected');
 }
 
 /**
@@ -89,7 +101,7 @@ function processGeminiResponse(response: any): string {
     // If no image, maybe it returned text?
     const text = response.response.text();
     console.error("API did not return an image. Response text:", text);
-    throw new Error(`Yapay zeka model bir resim yerine metin ile yanıt verdi: "${text.substring(0, 100)}..."`);
+    throw new NoImageError(tn('gemini.textInstead', { text: text.substring(0, 100) }));
 }
 
 /**
@@ -136,7 +148,7 @@ async function callGeminiWithRetry(imagePart: Part, textPart: Part) {
 export async function generateDecadeImage(imageDataUrl: string, decade: string): Promise<string> {
     const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.*)$/);
     if (!match) {
-        throw new Error("Geçersiz resim formatı.");
+        throw new Error(tn('gemini.invalidImage'));
     }
     const [, mimeType, base64Data] = match;
 
@@ -156,8 +168,7 @@ export async function generateDecadeImage(imageDataUrl: string, decade: string):
         const response = await callGeminiWithRetry(imagePart, textPart);
         return processGeminiResponse(response);
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-        const isNoImageError = errorMessage.includes("Yapay zeka model bir resim yerine metin ile yanıt verdi");
+        const isNoImageError = error instanceof NoImageError;
 
         if (isNoImageError) {
             console.warn("Primary prompt was likely blocked. Trying a fallback prompt.");
@@ -170,11 +181,11 @@ export async function generateDecadeImage(imageDataUrl: string, decade: string):
             } catch (fallbackError) {
                 console.error("Fallback prompt also failed.", fallbackError);
                 const finalErrorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-                throw new Error(`Yapay zeka modeli resim oluşturamadı. Lütfen tekrar deneyin. (Detay: ${finalErrorMessage})`);
+                throw new Error(tn('gemini.failedBoth', { detail: finalErrorMessage }));
             }
         } else {
             console.error("An unrecoverable error occurred during image generation.", error);
-            throw new Error(`Resim oluşturulurken bir hata oluştu: ${getFriendlyErrorMessage(error)}`);
+            throw new Error(tn('gemini.failed', { detail: getFriendlyErrorMessage(error) }));
         }
     }
 }

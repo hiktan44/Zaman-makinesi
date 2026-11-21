@@ -17,6 +17,9 @@ import PaymentSuccessPage from './components/PaymentSuccessPage';
 import PaymentCancelPage from './components/PaymentCancelPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginForm from './components/auth/LoginForm';
+import LangSwitch from './components/LangSwitch';
+import { useLang } from './lib/use-lang';
+import { t, tn, serverError } from './lib/i18n';
 
 type ImageStatus = 'pending' | 'done' | 'error';
 interface GeneratedImage {
@@ -46,6 +49,7 @@ const useMediaQuery = (query: string) => {
 // Inner App Component
 function AppContent() {
     const { user, token, isAuthenticated, isLoading: authLoading, login, logout, refreshCredits, isAdmin } = useAuth();
+    const { lang } = useLang();
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImage>>({});
     const [selectedDecades, setSelectedDecades] = useState<string[]>([]);
@@ -86,7 +90,7 @@ function AppContent() {
                 if (isAuthenticated && isAdmin) {
                     setView('admin');
                 } else {
-                    alert('Bu sayfaya erişim yetkiniz yok');
+                    alert(tn('app.noAccess'));
                     setView('app');
                 }
                 return;
@@ -115,7 +119,7 @@ function AppContent() {
     // Kredi kullanma API call
     const useCreditAPI = async (description: string, metadata?: any) => {
         if (!user || !token) {
-            throw new Error('Giriş yapmanız gerekiyor');
+            throw new Error(tn('app.needLogin'));
         }
 
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -136,18 +140,18 @@ function AppContent() {
         if (response.status === 401) {
             logout();
             setView('login');
-            throw new Error('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+            throw new Error(tn('app.sessionExpired'));
         }
 
         let data;
         try {
             data = await response.json();
         } catch {
-            throw new Error('Sunucudan geçersiz yanıt alındı');
+            throw new Error(tn('app.invalidResponse'));
         }
 
         if (!response.ok) {
-            throw new Error(data.error || 'Kredi kullanılamadı');
+            throw new Error(serverError(data.error, 'app.creditFailed'));
         }
 
         await refreshCredits();
@@ -190,7 +194,7 @@ function AppContent() {
 
         const totalImages = selectedDecades.length;
         if (user.credits < totalImages) {
-            alert(`Yetersiz kredi! Gereken: ${totalImages}, Mevcut: ${user.credits}. Lütfen kredi satın alın.`);
+            alert(tn('app.insufficientCreditsN', { need: totalImages, have: user.credits }));
             return;
         }
 
@@ -219,7 +223,7 @@ function AppContent() {
                     [decade]: { status: 'done', url: resultUrl },
                 }));
             } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
+                const errorMessage = err instanceof Error ? err.message : tn('common.unknownError');
                 setGeneratedImages(prev => ({
                     ...prev,
                     [decade]: { status: 'error', error: errorMessage },
@@ -252,7 +256,7 @@ function AppContent() {
 
         // Kredi kontrolü
         if (!user || user.credits < 1) {
-            alert('Yetersiz kredi! Lütfen kredi satın alın.');
+            alert(tn('app.insufficientCredits'));
             return;
         }
 
@@ -281,7 +285,7 @@ function AppContent() {
                 [decade]: { status: 'done', url: resultUrl },
             }));
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
+            const errorMessage = err instanceof Error ? err.message : tn('common.unknownError');
             setGeneratedImages(prev => ({
                 ...prev,
                 [decade]: { status: 'error', error: errorMessage },
@@ -326,12 +330,12 @@ function AppContent() {
                 }, {} as Record<string, string>);
 
             if (Object.keys(imageData).length === 0) {
-                alert("İndirilecek oluşturulmuş resim yok.");
+                alert(tn('app.noImagesToDownload'));
                 return;
             }
 
             // Ask the user if they want to add the credit
-            const addCredit = window.confirm("Albüm resimlerinin alt köşesine 'zamanmakinesi.app tarafından oluşturuldu' yazısı eklensin mi?");
+            const addCredit = window.confirm(tn('app.addCreditConfirm'));
 
             const albumDataUrl = await createAlbumPage(imageData, addCredit);
 
@@ -344,7 +348,7 @@ function AppContent() {
 
         } catch (error) {
             console.error("Failed to create or download album:", error);
-            alert("Üzgünüz, albümünüz oluşturulurken bir hata meydana geldi. Lütfen tekrar deneyin.");
+            alert(tn('app.albumError'));
         } finally {
             setIsDownloading(false);
         }
@@ -357,7 +361,7 @@ function AppContent() {
             const completedImages = entries.filter(([, image]) => image.status === 'done' && image.url);
 
             if (completedImages.length === 0) {
-                alert("İndirilecek oluşturulmuş resim yok.");
+                alert(tn('app.noImagesToDownload'));
                 return;
             }
 
@@ -378,7 +382,7 @@ function AppContent() {
             }
         } catch (error) {
             console.error("Failed to download all images:", error);
-            alert("Üzgünüz, resimler indirilirken bir hata meydana geldi. Lütfen tekrar deneyin.");
+            alert(tn('app.downloadError'));
         } finally {
             setIsDownloading(false);
         }
@@ -390,12 +394,12 @@ function AppContent() {
             return (
                 <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
                     <div className="text-center">
-                        <p className="text-xl text-text-light dark:text-text-dark mb-4">Yetkisiz erişim</p>
+                        <p className="text-xl text-text-light dark:text-text-dark mb-4">{t('login.unauthorized', lang)}</p>
                         <button
                             onClick={() => setView('login')}
                             className="px-6 py-3 bg-primary text-background-dark rounded-lg font-medium hover:bg-yellow-500"
                         >
-                            Giriş Yap
+                            {t('common.login', lang)}
                         </button>
                     </div>
                 </div>
@@ -411,7 +415,7 @@ function AppContent() {
             <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                    <p className="mt-4 text-text-light dark:text-text-dark">Yükleniyor...</p>
+                    <p className="mt-4 text-text-light dark:text-text-dark">{t('common.loading', lang)}</p>
                 </div>
             </div>
         );
@@ -419,7 +423,8 @@ function AppContent() {
 
     if (view === 'login') {
         return (
-            <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center py-12 px-4">
+            <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center py-12 px-4 relative">
+                <LangSwitch className="absolute top-4 right-4" />
                 <div className="max-w-md w-full">
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
@@ -428,7 +433,7 @@ function AppContent() {
                             </svg>
                         </div>
                         <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">Zaman Makinesi</h1>
-                        <p className="text-text-muted-light dark:text-text-muted-dark">Devam etmek için giriş yapın</p>
+                        <p className="text-text-muted-light dark:text-text-muted-dark">{t('login.subtitle', lang)}</p>
                     </div>
 
                     <div className="bg-white dark:bg-surface-dark rounded-xl p-8 shadow-lg border border-stone-200 dark:border-border-dark">
@@ -446,7 +451,7 @@ function AppContent() {
                             onClick={() => setView('intro')}
                             className="text-sm text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary"
                         >
-                            ← Ana sayfaya dön
+                            {t('login.backHome', lang)}
                         </button>
                     </div>
                 </div>
@@ -543,17 +548,17 @@ function AppContent() {
                                                     disabled={isDownloading}
                                                     className={`${primaryButtonClasses} disabled:opacity-50 disabled:cursor-not-allowed py-3 px-5 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
                                                 >
-                                                    {isDownloading ? 'İndiriliyor...' : 'Albümü İndir'}
+                                                    {isDownloading ? t('app.downloading', lang) : t('app.downloadAlbum', lang)}
                                                 </button>
                                                 <button
                                                     onClick={handleDownloadAllImages}
                                                     disabled={isDownloading}
                                                     className={`${secondaryButtonClasses} !text-text-light dark:!text-text-dark !border-stone-300 dark:!border-border-dark !bg-white/50 dark:!bg-surface-dark/50 hover:!bg-stone-100 dark:hover:!bg-surface-dark py-3 px-5 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}
                                                 >
-                                                    {isDownloading ? 'İndiriliyor...' : 'Tüm Resimleri İndir'}
+                                                    {isDownloading ? t('app.downloading', lang) : t('app.downloadAll', lang)}
                                                 </button>
                                                 <button onClick={handleReset} className={`${secondaryButtonClasses} !text-text-light dark:!text-text-dark !border-stone-300 dark:!border-border-dark !bg-white/50 dark:!bg-surface-dark/50 hover:!bg-stone-100 dark:hover:!bg-surface-dark py-3 px-5 text-base sm:text-lg whitespace-nowrap w-full sm:w-auto`}>
-                                                    Başa Dön
+                                                    {t('app.reset', lang)}
                                                 </button>
                                             </div>
                                         )}

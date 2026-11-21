@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
+import { useLang } from '../lib/use-lang';
+import { t, tn, serverError, localeFor } from '../lib/i18n';
 
 interface CreditPackage {
   id: number;
@@ -11,6 +13,7 @@ interface CreditPackage {
 
 const PricingPage: React.FC = () => {
   const { token, refreshCredits } = useAuth();
+  const { lang } = useLang();
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState<number | null>(null);
@@ -35,7 +38,7 @@ const PricingPage: React.FC = () => {
 
   const handlePurchase = async (packageId: number) => {
     if (!token) {
-      alert('Satın almak için giriş yapmalısınız');
+      alert(tn('pricing.loginRequired'));
       return;
     }
 
@@ -54,13 +57,13 @@ const PricingPage: React.FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Ödeme oluşturulamadı');
+        throw new Error(serverError(data.error, 'pricing.checkoutFailed'));
       }
 
       // Stripe checkout sayfasına yönlendir
       window.location.href = data.url;
     } catch (error: any) {
-      alert(error.message || 'Bir hata oluştu');
+      alert(error.message || tn('common.error'));
       setIsRedirecting(null);
     }
   };
@@ -79,10 +82,10 @@ const PricingPage: React.FC = () => {
       <div className="max-w-6xl mx-auto py-12 px-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-text-light dark:text-text-dark mb-4">
-            Kredi Paketleri
+            {t('pricing.title', lang)}
           </h1>
           <p className="text-lg text-text-muted-light dark:text-text-muted-dark max-w-2xl mx-auto">
-            Görsel üretmeye devam etmek için kredi satın alın. Her görsel üretimi 1 kredi harcar.
+            {t('pricing.subtitle', lang)}
           </p>
         </div>
 
@@ -101,7 +104,7 @@ const PricingPage: React.FC = () => {
               >
                 {isPopular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-background-dark text-sm font-bold px-4 py-1 rounded-full">
-                    En Popüler
+                    {t('pricing.popular', lang)}
                   </div>
                 )}
 
@@ -110,11 +113,11 @@ const PricingPage: React.FC = () => {
                     {pkg.credits}
                   </div>
                   <div className="text-lg text-text-muted-light dark:text-text-muted-dark mb-6">
-                    Kredi
+                    {t('common.credit', lang)}
                   </div>
 
                   <div className="text-3xl font-bold text-text-light dark:text-text-dark mb-6">
-                    ₺{pkg.price_try.toLocaleString('tr-TR')}
+                    ₺{pkg.price_try.toLocaleString(localeFor(lang))}
                   </div>
 
                   <button
@@ -126,11 +129,11 @@ const PricingPage: React.FC = () => {
                         : ''
                     }`}
                   >
-                    {isRedirecting === pkg.id ? 'Yönlendiriliyor...' : 'Satın Al'}
+                    {isRedirecting === pkg.id ? t('pricing.redirecting', lang) : t('pricing.buy', lang)}
                   </button>
 
                   <p className="mt-4 text-sm text-text-muted-light dark:text-text-muted-dark">
-                    Güvenli ödeme ile Stripe
+                    {t('pricing.secure', lang)}
                   </p>
                 </div>
               </div>
@@ -141,13 +144,13 @@ const PricingPage: React.FC = () => {
         <div className="mt-12 text-center">
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 max-w-2xl mx-auto">
             <h3 className="font-bold text-text-light dark:text-text-dark mb-2">
-              💡 Ödeme Bilgileri
+              {t('pricing.info.title', lang)}
             </h3>
             <ul className="text-sm text-text-muted-light dark:text-text-muted-dark text-left space-y-1">
-              <li>• Ödemeler EUR cinsinden yapılmaktadır</li>
-              <li>• Güncel TCMB kuru kullanılarak TRY fiyatlara çevrilir</li>
-              <li>• Ödeme başarılı olduğunda krediler otomatik yüklenir</li>
-              <li>• Krediler süresiz kullanılabilir</li>
+              <li>{t('pricing.info.1', lang)}</li>
+              <li>{t('pricing.info.2', lang)}</li>
+              <li>{t('pricing.info.3', lang)}</li>
+              <li>{t('pricing.info.4', lang)}</li>
             </ul>
           </div>
         </div>
