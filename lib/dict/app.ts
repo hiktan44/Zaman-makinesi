@@ -112,11 +112,11 @@ export const APP_DICT: Record<string, Entry> = {
   },
   'header.logout': {
     tr: 'Çıkış',
-    en: 'Log Out',
+    en: 'Sign Out',
   },
   'header.login': {
     tr: 'Giriş Yap',
-    en: 'Log In',
+    en: 'Sign In',
   },
   // --- intro ---
   'ip.demo1.title': {
@@ -434,6 +434,10 @@ export const APP_DICT: Record<string, Entry> = {
   'ip.pick': {
     tr: 'Paketi Seç',
     en: 'Choose Pack',
+  },
+  'ip.proof.likenessVal': {
+    tr: '%100',
+    en: '100%',
   },
   // --- cockpit ---
   'cp.sfx.title': {

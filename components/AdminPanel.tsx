@@ -240,7 +240,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 </div>
                                 <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-2">
                                     <div className="text-xs font-bold text-slate-400">{t('ad.kpiRevenue')}</div>
-                                    <div className="text-3xl font-black text-emerald-400 font-mono">₺{totalRevenue},00</div>
+                                    <div className="text-3xl font-black text-emerald-400 font-mono">{t('ad.kpiRevenueVal', { n: totalRevenue })}</div>
                                     <div className="text-[11px] text-slate-400">Stripe & Apple Pay</div>
                                 </div>
                                 <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-2">

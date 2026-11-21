@@ -21,7 +21,7 @@ export interface EraText {
 const EN: Record<string, EraText> = {
     '1860s': {
         year: '1860s',
-        title: '1860s — Victorian Era & Early Photography',
+        title: 'Victorian Era & Early Photography',
         badge: 'Daguerreotype',
         headline: 'A NEW ERA IN PHOTOGRAPHY: HISTORIC POSES OF THE 1860S',
         sub: 'Memories are immortalized for the first time on glass plates.',
@@ -29,7 +29,7 @@ const EN: Record<string, EraText> = {
     },
     '1870s': {
         year: '1870s',
-        title: '1870s — Steam Age & Industrial Revolution',
+        title: 'Steam Age & Industrial Revolution',
         badge: 'Industrial Revolution',
         headline: 'THE AGE OF RAILWAYS AND FACTORIES: THE WORLD OF 1870',
         sub: 'Steam locomotives link continents as a new century dawns.',
@@ -37,7 +37,7 @@ const EN: Record<string, EraText> = {
     },
     '1880s': {
         year: '1880s',
-        title: '1880s — Gilded Age & the Wild West',
+        title: 'Gilded Age & the Wild West',
         badge: 'Gilded Age',
         headline: '1880: GOLD MINES AND THE BIRTH OF NEW CITIES',
         sub: 'Cowboys, merchants and explorers draw the borders of a new world.',
@@ -45,7 +45,7 @@ const EN: Record<string, EraText> = {
     },
     '1890s': {
         year: '1890s',
-        title: '1890s — Belle Époque Elegance',
+        title: 'Belle Époque Elegance',
         badge: 'Belle Époque',
         headline: 'THE AGE OF ART AND ELEGANCE IN THE 1890S: THE BELLE ÉPOQUE',
         sub: 'Music, literature and architecture reach their peak in the salons of Paris and Istanbul.',
@@ -53,7 +53,7 @@ const EN: Record<string, EraText> = {
     },
     '1900s': {
         year: '1900s',
-        title: '1900s — Dawn of a New Century',
+        title: 'Dawn of a New Century',
         badge: 'Turn of the Millennium',
         headline: 'HELLO NEW CENTURY: THE FIRST DAYS OF 1900',
         sub: 'The 20th century began with great hopes, new inventions and giant strides.',
@@ -61,7 +61,7 @@ const EN: Record<string, EraText> = {
     },
     '1910s': {
         year: '1910s',
-        title: '1910s — Titanic & Early Aviation',
+        title: 'Titanic & Early Aviation',
         badge: 'First Flights',
         headline: '1910: THE SKIES AND OCEANS ARE BEING CONQUERED!',
         sub: 'The world shrinks with the first airships and transatlantic liners.',
@@ -69,7 +69,7 @@ const EN: Record<string, EraText> = {
     },
     '1920s': {
         year: '1920s',
-        title: '1920s — Great Gatsby & the Jazz Age',
+        title: 'Great Gatsby & the Jazz Age',
         badge: 'Roaring Twenties',
         headline: 'THE JAZZ CRAZE OF THE 1920S: A REVOLUTION IN DANCE AND FASHION!',
         sub: 'Charleston dances and jazz orchestras wrap the whole world in their rhythm.',
@@ -77,7 +77,7 @@ const EN: Record<string, EraText> = {
     },
     '1930s': {
         year: '1930s',
-        title: '1930s — Art Deco & Classic Hollywood',
+        title: 'Art Deco & Classic Hollywood',
         badge: 'Golden Age of Cinema',
         headline: 'THE SILVER SCREEN OF THE 1930S: HOLLYWOOD LEGENDS',
         sub: 'Stars dazzle audiences in the golden age of cinema.',
@@ -85,7 +85,7 @@ const EN: Record<string, EraText> = {
     },
     '1940s': {
         year: '1940s',
-        title: '1940s — Film Noir & Elegance',
+        title: 'Film Noir & Elegance',
         badge: 'Film Noir',
         headline: 'THE 1940S: AN ERA OF COURAGE, HONOR AND REBUILDING',
         sub: 'The world leaves the hard years behind and builds peace and brotherhood.',
@@ -93,7 +93,7 @@ const EN: Record<string, EraText> = {
     },
     '1950s': {
         year: '1950s',
-        title: '1950s — Rockabilly & Retro Diner',
+        title: 'Rockabilly & Retro Diner',
         badge: 'Age of Elvis',
         headline: '1950: THE ROCK’N’ROLL AND JUKEBOX CRAZE!',
         sub: 'Elvis Presley and a new generation of music send young people to the dance floors.',
@@ -101,7 +101,7 @@ const EN: Record<string, EraText> = {
     },
     '1960s': {
         year: '1960s',
-        title: '1960s — Flower Children & Beatlemania',
+        title: 'Flower Children & Beatlemania',
         badge: 'Peace & Music',
         headline: '1969: MANKIND ON THE MOON! AN AGE OF PEACE AND FREEDOM',
         sub: 'Apollo 11 landed on the Moon and the Woodstock festival united millions in peace.',
@@ -109,7 +109,7 @@ const EN: Record<string, EraText> = {
     },
     '1970s': {
         year: '1970s',
-        title: '1970s — Disco Fever & Studio 54',
+        title: 'Disco Fever & Studio 54',
         badge: 'Disco Fever',
         headline: 'THE 1970S: DISCO MUSIC AND GLITTER SWEEP THE WORLD',
         sub: 'As queues grow outside Studio 54, disco fashion spills onto the streets.',
@@ -117,7 +117,7 @@ const EN: Record<string, EraText> = {
     },
     '1980s': {
         year: '1980s',
-        title: '1980s — Synthwave & Neon City',
+        title: 'Synthwave & Neon City',
         badge: 'Retro Neon',
         headline: '1980: THE BIRTH OF THE DIGITAL AGE AND ELECTRONIC MUSIC',
         sub: 'Cassette players, arcades and synthwave rhythms leave their mark on the ’80s.',
@@ -125,7 +125,7 @@ const EN: Record<string, EraText> = {
     },
     '1990s': {
         year: '1990s',
-        title: '1990s — Grunge & Streetwear',
+        title: 'Grunge & Streetwear',
         badge: 'MTV & CD Era',
         headline: 'THE 1990S: THE BIRTH OF THE INTERNET AND ALTERNATIVE MUSIC',
         sub: 'As the World Wide Web connects the world, young people create a style of their own.',
@@ -133,7 +133,7 @@ const EN: Record<string, EraText> = {
     },
     '2000s': {
         year: '2000s',
-        title: '2000s — Y2K & Millennium Aesthetics',
+        title: 'Y2K & Millennium Aesthetics',
         badge: 'Y2K & Flip Phones',
         headline: '2000: THE NEW MILLENNIUM AND THE MOBILE PHONE CRAZE',
         sub: 'The 21st century began with futuristic silver outfits and digital music.',
@@ -141,7 +141,7 @@ const EN: Record<string, EraText> = {
     },
     '2010s': {
         year: '2010s',
-        title: '2010s — Smartphones & Hipster',
+        title: 'Smartphones & Hipster',
         badge: 'Social Media Era',
         headline: 'THE 2010S: THE AGE OF SOCIAL MEDIA AND SMARTPHONES',
         sub: 'With Instagram, touchscreens and mobile internet, the world went instantly connected.',
@@ -149,7 +149,7 @@ const EN: Record<string, EraText> = {
     },
     '2020s': {
         year: '2020s',
-        title: '2020s — Today & Modern Aesthetics',
+        title: 'Today & Modern Aesthetics',
         badge: 'Age of AI',
         headline: 'THE 2020S: THE AI REVOLUTION AND DIGITAL TRANSFORMATION',
         sub: 'AI models and electric vehicles have moved to the center of daily life.',
@@ -157,7 +157,7 @@ const EN: Record<string, EraText> = {
     },
     '2030s': {
         year: '2030s',
-        title: '2030s — Autonomous Cities & Green Energy',
+        title: 'Autonomous Cities & Green Energy',
         badge: 'Smart Cities',
         headline: '2030: AUTONOMOUS TRANSPORT AND SKYSCRAPER GARDENS',
         sub: 'AI-controlled autonomous vehicles and green energy have transformed our cities.',
@@ -165,7 +165,7 @@ const EN: Record<string, EraText> = {
     },
     '2040s': {
         year: '2040s',
-        title: '2040s — Holographic Life & Quantum',
+        title: 'Holographic Life & Quantum',
         badge: 'Holo-Tech',
         headline: '2040: QUANTUM COMPUTERS AND THE DIGITAL UNIVERSE',
         sub: 'The quantum age begins as hologram communication reduces distances to zero.',

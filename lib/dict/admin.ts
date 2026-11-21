@@ -254,4 +254,8 @@ export const ADMIN_DICT: Record<string, Entry> = {
     tr: '5 Kredi',
     en: '5 Credits',
   },
+  'ad.kpiRevenueVal': {
+    tr: '₺{n},00',
+    en: '₺{n}.00',
+  },
 };

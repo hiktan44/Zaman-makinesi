@@ -159,7 +159,7 @@ export default function IntroPage({ onStart, onOpenPricing, onOpenAuth, onOpenAd
                                     <div className="text-xs text-slate-400">{t('ip.proof.speedLabel')}</div>
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-black text-cyan-400 font-mono">%100</div>
+                                    <div className="text-2xl font-black text-cyan-400 font-mono">{t('ip.proof.likenessVal')}</div>
                                     <div className="text-xs text-slate-400">{t('ip.proof.likeness')}</div>
                                 </div>
                             </div>
