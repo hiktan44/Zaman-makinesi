@@ -46,7 +46,7 @@ const Header: React.FC<HeaderProps> = ({
     return (
         <header className="flex flex-col border-b border-solid border-slate-800 bg-slate-950/95 backdrop-blur-md sticky top-0 z-40">
             {/* Top Bar */}
-            <div className="flex items-center justify-between whitespace-nowrap px-4 sm:px-6 md:px-10 py-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-y-2 whitespace-nowrap px-4 sm:px-6 md:px-10 py-2.5">
                 {/* Logo */}
                 <div
                     onClick={() => {
@@ -102,7 +102,7 @@ const Header: React.FC<HeaderProps> = ({
                 </nav>
 
                 {/* Navigation & Actions Right */}
-                <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
                     {/* Admin Button */}
                     {(isAdmin || user?.email === 'hikmet044@gmail.com') && onOpenAdmin && (
                         <button
