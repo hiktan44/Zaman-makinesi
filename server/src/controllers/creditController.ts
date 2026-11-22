@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { query } from '../config/database';
+import { getClient, query } from '../config/database';
 
 /**
  * Kullanıcının kredi bilgisini getir
@@ -32,40 +32,29 @@ export const getCredits = async (req: Request, res: Response) => {
  * Görsel üretimi için kredi kullan
  */
 export const useCredit = async (userId: number, description: string, metadata?: any) => {
+  if (!Number.isSafeInteger(userId) || userId <= 0) throw new Error('Kullanıcı bulunamadı');
+  const client = await getClient();
   try {
-    // Kredi kontrolü
-    const userResult = await query(
-      'SELECT credits FROM users WHERE id = $1',
-      [userId]
+    await client.query('BEGIN');
+    const result = await client.query(
+      'UPDATE users SET credits = credits - 1 WHERE id = $1 AND credits >= 1 RETURNING credits', [userId]
     );
-
-    if (userResult.rows.length === 0) {
-      throw new Error('Kullanıcı bulunamadı');
+    if (result.rowCount !== 1) {
+      const user = await client.query('SELECT id FROM users WHERE id = $1', [userId]);
+      throw new Error(user.rowCount ? 'Yetersiz kredi' : 'Kullanıcı bulunamadı');
     }
-
-    const currentCredits = userResult.rows[0].credits;
-
-    if (currentCredits < 1) {
-      throw new Error('Yetersiz kredi');
-    }
-
-    // Kredi düş
-    await query(
-      'UPDATE users SET credits = credits - 1 WHERE id = $1',
-      [userId]
-    );
-
-    // Aktivite kaydı
-    await query(
-      `INSERT INTO user_activities (user_id, action_type, credits_used, description, metadata) 
+    await client.query(
+      `INSERT INTO user_activities (user_id, action_type, credits_used, description, metadata)
        VALUES ($1, 'image_generation', 1, $2, $3)`,
       [userId, description, JSON.stringify(metadata || {})]
     );
-
-    return { success: true, remainingCredits: currentCredits - 1 };
+    await client.query('COMMIT');
+    return { success: true, remainingCredits: result.rows[0].credits };
   } catch (error) {
-    console.error('Kredi kullanma hatası:', error);
+    await client.query('ROLLBACK');
     throw error;
+  } finally {
+    client.release();
   }
 };
 

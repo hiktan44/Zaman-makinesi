@@ -1,0 +1,41 @@
+name: Ödeme ve kredi işlem güvenliği
+on:
+  pull_request:
+  push:
+    branches: [feature/payment-system, 'codex/**']
+permissions:
+  contents: read
+jobs:
+  payment-security:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fictional-ci-password
+          POSTGRES_DB: codex_zaman_ci
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U postgres -d codex_zaman_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Kilitli bağımlılıkları kur
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Sunucuyu tam derle
+        run: npm run build
+      - name: Gerçek PostgreSQL ve imzalı kurgusal bildirim testleri
+        env:
+          DATABASE_URL: postgres://postgres:fictional-ci-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/codex_zaman_ci?sslmode=disable
+          CODEX_ZAMAN_TEST_ALLOW: '1'
+        run: npm run test:payment-security

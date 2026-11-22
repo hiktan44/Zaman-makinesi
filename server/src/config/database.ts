@@ -28,10 +28,10 @@ export const query = async (text: string, params?: any[]) => {
   try {
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: result.rowCount });
+    console.log('Veritabanı sorgusu tamamlandı', { text, duration, rows: result.rowCount });
     return result;
   } catch (error) {
-    console.error('Query error:', error);
+    console.error('Veritabanı sorgusu başarısız');
     throw error;
   }
 };

@@ -7,7 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "migrate": "node -r ts-node/register src/migrations/init.ts"
+    "migrate": "node -r ts-node/register src/migrations/init.ts",
+    "test:payment-security": "node tests/run-payment-tests.cjs"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
