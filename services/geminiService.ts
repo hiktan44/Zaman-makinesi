@@ -2,9 +2,18 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { GoogleGenerativeAI, Part } from "@google/generative-ai";
+import { GenerationConfig, GoogleGenerativeAI, Part } from "@google/generative-ai";
 import { ERAS } from "../constants/eraConstants";
 import { t } from '../lib/i18n';
+
+const DEFAULT_GEMINI_IMAGE_MODEL = "gemini-nano-banana-2.1";
+const DEFAULT_GEMINI_IMAGE_FALLBACK_MODEL = "gemini-3-pro-image";
+
+function getGeminiImageModels(): string[] {
+    const primary = import.meta.env.VITE_GEMINI_IMAGE_MODEL?.trim() || DEFAULT_GEMINI_IMAGE_MODEL;
+    const fallback = import.meta.env.VITE_GEMINI_IMAGE_FALLBACK_MODEL?.trim() || DEFAULT_GEMINI_IMAGE_FALLBACK_MODEL;
+    return Array.from(new Set([primary, fallback].filter(Boolean)));
+}
 
 export function getCustomApiKeys(): { geminiKey: string; kieKey: string; falKey: string } {
     const geminiKey = localStorage.getItem('zm_custom_gemini_key') || import.meta.env.VITE_API_KEY?.trim() || "";
@@ -131,29 +140,37 @@ export async function generateDecadeImage(imageDataUrl: string, eraIdOrDecade: s
         }
     }
 
-    // 2. Try Google Gemini if key is provided
+    // 2. Try Google Gemini Nano Banana image models if key is provided
     if (geminiKey && base64Data) {
-        try {
-            console.log(`[Zaman Makinesi] Gemini API çağrılıyor: ${eraIdOrDecade}`);
-            const genAI = new GoogleGenerativeAI(geminiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-            const imagePart: Part = {
-                inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
-                }
-            };
-            const textPart: Part = { text: prompt };
-            const response = await model.generateContent([textPart, imagePart]);
-            const candidate = response.response?.candidates?.[0];
-            const candidateImage = candidate?.content?.parts?.find((part: Part) => (part as any).inlineData);
-            if ((candidateImage as any)?.inlineData) {
-                const { mimeType: m, data: d } = (candidateImage as any).inlineData;
-                return `data:${m};base64,${d}`;
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const imagePart: Part = {
+            inlineData: {
+                mimeType: mimeType,
+                data: base64Data
             }
-        } catch (geminiErr) {
-            console.warn("[Zaman Makinesi] Gemini API çağrısı başarısız oldu:", geminiErr);
+        };
+        const textPart: Part = { text: prompt };
+
+        for (const modelId of getGeminiImageModels()) {
+            try {
+                console.log(`[Zaman Makinesi] Gemini API çağrılıyor (${modelId}): ${eraIdOrDecade}`);
+                const model = genAI.getGenerativeModel({
+                    model: modelId,
+                    generationConfig: {
+                        responseModalities: ["TEXT", "IMAGE"],
+                    } as GenerationConfig,
+                });
+
+                const response = await model.generateContent([textPart, imagePart]);
+                const candidate = response.response?.candidates?.[0];
+                const candidateImage = candidate?.content?.parts?.find((part: Part) => Boolean((part as any).inlineData));
+                if ((candidateImage as any)?.inlineData) {
+                    const { mimeType: m, data: d } = (candidateImage as any).inlineData;
+                    return `data:${m};base64,${d}`;
+                }
+            } catch (geminiErr) {
+                console.warn(`[Zaman Makinesi] Gemini API (${modelId}) çağrısı başarısız oldu:`, geminiErr);
+            }
         }
     }
 

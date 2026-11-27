@@ -51,7 +51,7 @@
                     <a href="#how-it-works" class="btn btn-secondary">Nasıl Çalışır?</a>
                 </div>
                 <div class="tech-stack-mini">
-                    <span><i class="fa-brands fa-google"></i> Gemini 2.5 Flash</span>
+                    <span><i class="fa-brands fa-google"></i> Gemini Nano Banana 2.1</span>
                     <span><i class="fa-solid fa-wand-magic-sparkles"></i> Prompt Engineering</span>
                 </div>
             </div>
@@ -134,7 +134,7 @@
             <div class="tech-content">
                 <div class="tech-text">
                     <h2>Teknolojinin Zirvesi</h2>
-                    <p>Uygulamamızın kalbinde Google'ın en güçlü modellerinden <strong>Gemini 2.5 Flash</strong>
+                    <p>Uygulamamızın kalbinde Google'ın en güçlü görsel modellerinden <strong>Gemini Nano Banana 2.1</strong>
                         yatıyor.</p>
 
                     <div class="tech-details">
@@ -161,9 +161,9 @@
 const generateImage = async (year) => {
   const prompt = createDetailedPrompt(year);
   
-  // Google Gemini 2.5 Flash
+  // Google Gemini Nano Banana 2.1
   const response = await gemini.generate({
-    model: "gemini-2.5-flash-image",
+    model: "gemini-nano-banana-2.1",
     prompt: prompt,
     style: "polaroid_vintage"
   });

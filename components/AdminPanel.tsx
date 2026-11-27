@@ -510,7 +510,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
                                     <div>
                                         <label className="block text-xs font-bold text-slate-300 mb-1">
-                                            Google Gemini API Key (Gemini 2.0 Flash / Imagen)
+                                            Google Gemini API Key (Gemini Nano Banana 2.1 / Gemini 4)
                                         </label>
                                         <input
                                             type="password"
